@@ -135,30 +135,58 @@ L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png", {
 }).addTo(map);
 
 let markers = [];
-let pendingMap = {};   // 未承認トランザクション管理
-let confirmedMap = {}; // 承認済みトランザクション管理
+let pendingMap = {};
+let confirmedMap = {};
 
 // -----------------------------
-// ノード選択
+// Nodewatch → fallback（スマホ対応）
 // -----------------------------
 const NODEWATCH_URL =
   "https://nodewatch.symbol.tools/api/symbol/nodes/peer?only_ssl=true&limit=100&order=random";
+
+// 最も安定しているフォールバックノード
+const FALLBACK_NODE = "https://symbol-node.blockchain-company.net:3001";
 
 let SELECTED_NODE = null;
 
 async function selectBestNode() {
   const info = document.getElementById("nodeInfo");
-  const res = await fetch(NODEWATCH_URL);
-  const nodes = await res.json();
 
-  nodes.sort((a,b) => b.height - a.height);
+  // Nodewatch を 1.5秒だけ試す
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 1500);
 
-  let ep = new URL(nodes[0].endpoint);
-  ep.protocol = "https:";
-  SELECTED_NODE = ep.origin;
+  try {
+    const res = await fetch(NODEWATCH_URL, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) throw new Error("Nodewatch error");
+
+    const nodes = await res.json();
+    nodes.sort((a,b) => b.height - a.height);
+
+    let ep = new URL(nodes[0].endpoint);
+    ep.protocol = "https:";
+
+    SELECTED_NODE = ep.origin;
+
+    info.innerHTML =
+      `使用ノード：<b>${SELECTED_NODE}</b><br>ブロック高：${nodes[0].height}`;
+
+    console.log("Nodewatch 成功 →", SELECTED_NODE);
+    return;
+
+  } catch (e) {
+    console.warn("Nodewatch 失敗 → fallback へ切替", e);
+  }
+
+  // fallback
+  SELECTED_NODE = FALLBACK_NODE;
 
   info.innerHTML =
-    `使用ノード：<b>${SELECTED_NODE}</b><br>ブロック高：${nodes[0].height}`;
+    `使用ノード：<b>${SELECTED_NODE}</b><br><span style="color:#e11">Nodewatch失敗 → フォールバック使用</span>`;
+
+  console.log("フォールバックノード使用:", SELECTED_NODE);
 }
 
 // -----------------------------
@@ -189,7 +217,7 @@ function parseEarthquakeJSON(msg) {
 // 色分け
 // -----------------------------
 function getColorByShindo(shindo, isPending) {
-  if (isPending) return "#ff66cc"; // ピンク：未承認
+  if (isPending) return "#ff66cc";
 
   if (shindo < 3) return "#7c3aed";
   if (shindo < 4) return "#5b21b6";
@@ -199,7 +227,7 @@ function getColorByShindo(shindo, isPending) {
 }
 
 // -----------------------------
-// 地震データ取得
+// Confirmed Data Load
 // -----------------------------
 async function loadEarthquake() {
   if (!SELECTED_NODE) return;
@@ -222,9 +250,7 @@ async function loadEarthquake() {
   const res = await fetch(url);
   const data = await res.json();
 
-  const txs = (data.data || [])
-    .sort((a, b) => Number(b.meta.height) - Number(a.meta.height))
-    .slice(0, 20);
+  const txs = (data.data || []).slice(0, 20);
 
   let first = true;
   let firstLat = 36.5, firstLon = 137.5;
@@ -232,7 +258,7 @@ async function loadEarthquake() {
   txs.forEach(item => {
     const tx = item.transaction;
     const msg = hexToUtf8(extractMsg(tx));
-    const j  = parseEarthquakeJSON(msg);
+    const j = parseEarthquakeJSON(msg);
     if (!j || !j.earthquake) return;
 
     confirmedMap[item.meta.hash] = j;
@@ -246,7 +272,7 @@ async function loadEarthquake() {
     addEarthquakeToUI(j, false, item.meta.hash, false);
   });
 
-  status.textContent = `取得完了：${txs.length} 件`;
+  status.textContent = `取得完了：${txs.length}件`;
   map.setView([firstLat, firstLon], 6);
 }
 
@@ -254,14 +280,13 @@ async function loadEarthquake() {
 // UI追加
 // -----------------------------
 function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
-  const eq   = j.earthquake;
+  const eq = j.earthquake;
   const hypo = eq.hypocenter;
   const shindo = eq.maxScale * 0.1;
 
   const list = document.getElementById("list");
   const color = getColorByShindo(shindo, isPending);
 
-  // ----- Marker -----
   const marker = L.circleMarker(
     [hypo.latitude, hypo.longitude],
     { radius: isPending ? 12 : 9, fillColor: color, color:"#fff", fillOpacity: 0.95 }
@@ -282,7 +307,6 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
 
   markers.push(marker);
 
-  // ----- Card -----
   const card = document.createElement("div");
   card.className = "eqCard";
   card.style.borderLeftColor = color;
@@ -311,28 +335,25 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
   if (insertTop) list.prepend(card);
   else list.appendChild(card);
 
-  // map に保持
   return { marker, card };
 }
 
 // -----------------------------
-// 未承認 → 承認へ反映（A案）
+// 未承認 → 承認へ更新
 // -----------------------------
 function promotePendingToConfirmed(hash, j) {
   const entry = pendingMap[hash];
   if (!entry) return;
 
   const { marker, card } = entry;
-  const eq   = j.earthquake;
+  const eq = j.earthquake;
   const hypo = eq.hypocenter;
   const shindo = eq.maxScale * 0.1;
 
   const color = getColorByShindo(shindo, false);
 
-  // Marker 更新
   marker.setStyle({ fillColor: color, radius: 9 });
 
-  // Card 更新
   card.style.borderLeftColor = color;
   card.querySelector(".eqTime").textContent = eq.time;
   card.querySelector(".badgeSymbol").outerHTML =
@@ -390,9 +411,9 @@ function subscribeChannels() {
   // ---- 未承認 ----
   let ch1 = ListenerChannelName.unconfirmedAdded + "/" + address;
   addCallback(ch1, (txObj)=>{
-    const tx  = txObj.transaction;
+    const tx = txObj.transaction;
     const msg = hexToUtf8(extractMsg(tx));
-    const j   = parseEarthquakeJSON(msg);
+    const j = parseEarthquakeJSON(msg);
     if (!j || !j.earthquake) return;
 
     const ui = addEarthquakeToUI(j, true, txObj.meta.hash, true);
@@ -405,9 +426,9 @@ function subscribeChannels() {
   let ch2 = ListenerChannelName.confirmedAdded + "/" + address;
   addCallback(ch2, (txObj)=>{
     const hash = txObj.meta.hash;
-    const tx   = txObj.transaction;
-    const msg  = hexToUtf8(extractMsg(tx));
-    const j    = parseEarthquakeJSON(msg);
+    const tx = txObj.transaction;
+    const msg = hexToUtf8(extractMsg(tx));
+    const j = parseEarthquakeJSON(msg);
     if (!j || !j.earthquake) return;
 
     confirmedMap[hash] = j;
@@ -418,9 +439,7 @@ function subscribeChannels() {
 
   // ---- ブロック（安定用）----
   let ch3 = ListenerChannelName.block;
-  addCallback(ch3, (block)=>{
-    // console.log("block", block.height);
-  });
+  addCallback(ch3, (block)=>{});
   ws.send(JSON.stringify({ uid, subscribe: ch3 }));
 }
 
