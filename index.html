@@ -5,6 +5,13 @@
   <title>Symbol Earthquake Viewer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Leaflet Map -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <style>
     body {
       font-family: "Inter", system-ui, sans-serif;
@@ -12,6 +19,9 @@
       padding: 0;
       background: #eef1f6;
       color: #222;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
     header {
@@ -20,23 +30,57 @@
       padding: 1.2rem 1.5rem;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-
     header h1 {
       margin: 0;
       font-size: 1.4rem;
       font-weight: 600;
     }
-
     header .sub {
       font-size: 0.9rem;
       opacity: 0.9;
       margin-top: 0.4rem;
     }
 
-    .container {
-      padding: 1rem;
-      max-width: 900px;
-      margin: auto;
+    /* Aタイプ：カード＋地図 2カラム */
+    .main {
+      flex: 1;
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    /* 左：カード一覧 */
+    .leftPanel {
+      width: 55%;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    /* 右：地図 */
+    .rightPanel {
+      width: 45%;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      min-height: 600px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+
+    /* スマホ時は1カラム */
+    @media(max-width: 900px) {
+      .main {
+        flex-direction: column;
+      }
+      .leftPanel, .rightPanel {
+        width: 100%;
+      }
+      #map {
+        height: 400px;
+      }
     }
 
     .nodeStatus {
@@ -54,18 +98,12 @@
       padding: 1rem;
       border-radius: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      margin-bottom: 1.5rem;
-    }
-
-    label {
-      font-size: 0.85rem;
-      color: #555;
+      margin-bottom: 1.2rem;
     }
 
     input {
       padding: 0.5rem 0.7rem;
       width: 100%;
-      margin-top: 0.3rem;
       border-radius: 8px;
       border: 1px solid #ccc;
       font-size: 0.9rem;
@@ -90,12 +128,10 @@
       margin-bottom: 1rem;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       border-left: 6px solid #7c3aed;
-      transition: 0.2s;
+      cursor: pointer;
     }
-
     .eqCard:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 12px rgba(0,0,0,0.12);
+      background: #fafaff;
     }
 
     .eqHeader {
@@ -104,13 +140,10 @@
       align-items: center;
       margin-bottom: .6rem;
     }
-
     .eqTime {
       font-size: 1.05rem;
       font-weight: 600;
-      color: #333;
     }
-
     .badgeSymbol {
       background: #7c3aed;
       color: white;
@@ -123,56 +156,24 @@
       font-size: 1.1rem;
       font-weight: 600;
       margin: 0.2rem 0 0.5rem;
-      color: #333;
     }
 
-    .infoRow {
-      font-size: 0.9rem;
-      margin: 0.2rem 0;
-      color: #444;
-    }
-
-    /* 最大震度の色分け */
+    /* 震度色分け */
     .shindo {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 6px;
+      padding: 2px 5px;
+      border-radius: 4px;
       color: #fff;
-      font-weight: 600;
-      margin-left: 4px;
-      font-size: 0.85rem;
+      font-weight: 700;
     }
-    .s10 { background:#c53030; }
-    .s20 { background:#e53e3e; }
-    .s30 { background:#dd6b20; }
-    .s40 { background:#d69e2e; }
-    .s50 { background:#38a169; }
-    .s60 { background:#2b6cb0; }
+    .s10 { background:#d93025; }
+    .s20 { background:#ea4335; }
+    .s30 { background:#fbbc04; color:#000; }
+    .s40 { background:#34a853; }
+    .s50 { background:#4285f4; }
+    .s60 { background:#673ab7; }
 
-    .rawArea {
-      background: #f9f9fc;
-      border-radius: 8px;
-      margin-top: 0.7rem;
-      padding: 0.5rem;
-      font-size: 0.8rem;
-      max-height: 3.5rem;
-      overflow: hidden;
-      font-family: ui-monospace, monospace;
-      border: 1px solid #ddd;
-      word-break: break-all;
-    }
-
-    .toggle {
-      font-size: 0.8rem;
-      color: #4f46e5;
-      text-decoration: underline;
-      cursor: pointer;
-      margin-top: 0.3rem;
-      display: inline-block;
-    }
   </style>
 </head>
-
 
 <body>
 
@@ -181,41 +182,63 @@
   <div class="sub">気象庁の地震情報を Symbol ブロックチェーンに刻んだデータを表示</div>
 </header>
 
-<div class="container">
+<div class="main">
 
-  <div class="nodeStatus" id="nodeInfo">ノード選択中…</div>
+  <!-- 左：地震カード一覧 -->
+  <div class="leftPanel">
 
-  <div class="inputCard">
-    <label>対象アドレス</label>
-    <input id="addr" value="NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ" />
+    <div class="nodeStatus" id="nodeInfo">ノード選択中…</div>
 
-    <button id="load">地震情報を取得</button>
-    <div id="status" style="margin-top:6px;font-size:0.85rem;color:#555;"></div>
+    <div class="inputCard">
+      <label>対象アドレス</label>
+      <input id="addr" value="NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ" />
+      <button id="load">地震情報を取得</button>
+      <div id="status" style="margin-top:6px;font-size:0.85rem;color:#555;"></div>
+    </div>
+
+    <div id="list"></div>
+
   </div>
 
-  <div id="list"></div>
+  <!-- 右：日本地図 -->
+  <div class="rightPanel">
+    <div id="map"></div>
+  </div>
 
 </div>
 
-
 <script>
 
-// ========== ノードウォッチ設定 ==========
+// ========== Leaflet 地図初期化 ==========
+let map = L.map('map').setView([36.5, 137.5], 5);
+
+// 国土地理院の地図タイル
+L.tileLayer(
+  "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+  {
+    attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html'>地理院タイル</a>",
+    maxZoom: 18,
+    minZoom: 3
+  }
+).addTo(map);
+
+let markers = [];  // 地震マーカーを保持
+
+
+// ========== Symbol ノードウォッチ ==========
 const NODEWATCH_URL =
   "https://nodewatch.symbol.tools/api/symbol/nodes/peer?only_ssl=true&limit=100&order=random";
 
 let SELECTED_NODE = null;
 
 
-// ========== Utility: HEX → UTF8 ==========
 function hexToUtf8(hex) {
   if (!hex) return "";
   if (hex.length % 2) hex = "0" + hex;
   const bytes = new Uint8Array(hex.match(/.{1,2}/g).map(b => parseInt(b,16)));
   try { return new TextDecoder().decode(bytes); } catch { return ""; }
 }
-
-function extractMessage(tx) {
+function extractMsg(tx) {
   if (!tx.message) return "";
   if (typeof tx.message === "string") return tx.message;
   if (tx.message.payload) return tx.message.payload;
@@ -223,171 +246,145 @@ function extractMessage(tx) {
 }
 
 
-// ========== JSON 自動修復パーサー ==========
+// JSON 自動修復
 function parseEarthquakeJSON(msg) {
   if (!msg) return null;
-
   let raw = msg.trim();
 
-  // 1) 外側のダブルクォートを除去
   if (raw.startsWith('"') && raw.endsWith('"')) {
     raw = raw.slice(1, -1);
   }
-
-  // 2) エスケープされた \" を元の " に戻す
   raw = raw.replace(/\\"/g, '"');
-
-  // 3) 不要な改行や制御文字を除去（壊れていても復元しやすく）
   raw = raw.replace(/[\u0000-\u001F]+/g, "");
 
-  // 4) 最終パース
-  try {
-    return JSON.parse(raw);
-  } catch {
-    console.warn("JSONパース失敗:", raw);
-    return null;
-  }
+  try { return JSON.parse(raw); }
+  catch { return null; }
 }
 
 
-// ========== ノード選択 ==========
+// ノード選択
 async function selectBestNode() {
   const info = document.getElementById("nodeInfo");
 
+  const res = await fetch(NODEWATCH_URL);
+  const nodes = await res.json();
+
+  nodes.sort((a,b)=> Number(b.height||0) - Number(a.height||0));
+  const best = nodes[0];
+
+  let ep = best.endpoint;
   try {
-    const res = await fetch(NODEWATCH_URL);
-    const nodes = await res.json();
+    const u = new URL(ep);
+    u.protocol = "https:";
+    ep = u.origin;
+  } catch {}
 
-    nodes.sort((a,b)=> Number(b.height||0) - Number(a.height||0));
-    const best = nodes[0];
-
-    let ep = best.endpoint;
-    try {
-      const u = new URL(ep);
-      u.protocol = "https:";
-      ep = u.origin;
-    } catch {}
-
-    SELECTED_NODE = ep;
-    info.innerHTML = `
-      使用ノード：<b>${SELECTED_NODE}</b><br>
-      ブロック高：${best.height}
-    `;
-  } catch(e) {
-    info.innerHTML = `<span class="err">ノード取得エラー: ${e.message}</span>`;
-  }
+  SELECTED_NODE = ep;
+  info.innerHTML = `使用ノード：<b>${ep}</b><br>ブロック高：${best.height}`;
 }
 
 
-// ========== 地震データ取得 ==========
+// 地震データ取得
 document.getElementById("load").onclick = async () => {
 
-  const status = document.getElementById("status");
   const list = document.getElementById("list");
-
-  if (!SELECTED_NODE) {
-    alert("ノードがまだ準備できていません。数秒待ってください。");
-    return;
-  }
-
-  const addr = document.getElementById("addr").value;
+  const status = document.getElementById("status");
   list.innerHTML = "";
   status.textContent = "取得中…";
 
-  try {
-    const url = `${SELECTED_NODE}/transactions/confirmed?address=${addr}&pageSize=100&order=desc`;
-    const res = await fetch(url);
-    const data = await res.json();
+  markers.forEach(m => map.removeLayer(m)); // 古いマーカー削除
+  markers = [];
 
-    const txs = data.data || [];
-    let count = 0;
+  const addr = document.getElementById("addr").value;
+  const url = `${SELECTED_NODE}/transactions/confirmed?address=${addr}&pageSize=100&order=desc`;
 
-    txs.forEach(item => {
-      const tx = item.transaction;
-      const msg = hexToUtf8(extractMessage(tx));
+  const res = await fetch(url);
+  const data = await res.json();
 
-      const j = parseEarthquakeJSON(msg);
-      if (!j || !j.earthquake) return;
+  const txs = data.data || [];
+  let latestLat = 36.5;
+  let latestLon = 137.5;
+  let first = true;
 
-      count++;
+  txs.forEach(item => {
+    const tx = item.transaction;
+    const msg = hexToUtf8(extractMsg(tx));
+    const j = parseEarthquakeJSON(msg);
 
-      const eq = j.earthquake;
-      const issue = j.issue || {};
+    if (!j || !j.earthquake) return;
 
-      const shindo = Number(eq.maxScale || 0);
-      let shClass = "s10";
-      if (shindo >= 50) shClass = "s60";
-      else if (shindo >= 40) shClass = "s50";
-      else if (shindo >= 30) shClass = "s40";
+    const eq = j.earthquake;
+    const issue = j.issue || {};
 
-      const card = document.createElement("div");
-      card.className = "eqCard";
+    // 最新の地震を地図中央にする
+    if (first) {
+      latestLat = eq.hypocenter.latitude;
+      latestLon = eq.hypocenter.longitude;
+      first = false;
+    }
 
-      card.innerHTML = `
-        <div class="eqHeader">
-          <div class="eqTime">${eq.time}</div>
-          <div class="badgeSymbol">Symbol Blockchain</div>
-        </div>
+    // 震度色
+    const s = Number(eq.maxScale);
+    let color = "#d93025";
+    if (s >= 50) color = "#673ab7";
+    else if (s >= 40) color = "#4285f4";
+    else if (s >= 30) color = "#fbbc04";
+    else if (s >= 20) color = "#ea4335";
 
-        <div class="place">${eq.hypocenter.name}</div>
+    // Leaflet マーカー
+    const marker = L.circleMarker(
+      [eq.hypocenter.latitude, eq.hypocenter.longitude],
+      {
+        radius: 8,
+        fillColor: color,
+        color: "#fff",
+        weight: 1,
+        fillOpacity: 0.9
+      }
+    )
+      .addTo(map)
+      .bindPopup(`
+        <b>${eq.hypocenter.name}</b><br>
+        ${eq.time}<br>
+        M${eq.hypocenter.magnitude} / 最大震度 ${eq.maxScale}
+      `);
 
-        <div class="infoRow">
-          経度/緯度：${eq.hypocenter.longitude}, ${eq.hypocenter.latitude}
-        </div>
-        <div class="infoRow">
-          深さ：${eq.hypocenter.depth} km
-        </div>
-        <div class="infoRow">
-          マグニチュード：${eq.hypocenter.magnitude}
-        </div>
-        <div class="infoRow">
-          最大震度：
-          <span class="shindo ${shClass}">${eq.maxScale}</span>
-        </div>
+    markers.push(marker);
 
-        <div class="infoRow">
-          津波：国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}
-        </div>
+    // カード生成
+    const card = document.createElement("div");
+    card.className = "eqCard";
+    card.onclick = () => map.setView([eq.hypocenter.latitude, eq.hypocenter.longitude], 8);
 
-        <div class="infoRow">
-          発表：${issue.time} (${issue.type} / ${issue.source})
-        </div>
+    card.innerHTML = `
+      <div class="eqHeader">
+        <div class="eqTime">${eq.time}</div>
+        <div class="badgeSymbol">Symbol Blockchain</div>
+      </div>
 
-        <div class="rawArea" id="raw_${tx.hash}">
-          ${msg.replace(/\n/g, "")}
-        </div>
-        <span class="toggle" onclick="toggleRaw('${tx.hash}')">全文表示</span>
-      `;
+      <div class="place">${eq.hypocenter.name}</div>
 
-      list.appendChild(card);
-    });
+      経度/緯度：${eq.hypocenter.longitude}, ${eq.hypocenter.latitude}<br>
+      深さ：${eq.hypocenter.depth} km<br>
+      M${eq.hypocenter.magnitude}<br>
+      最大震度：<span class="shindo s${s}">${s}</span><br>
+      発表：${issue.time} (${issue.type} / ${issue.source})
+    `;
 
-    status.textContent = `取得完了：${count} 件（地震データ）`;
+    list.appendChild(card);
+  });
 
-  } catch(e) {
-    status.innerHTML = `<span class="err">エラー: ${e.message}</span>`;
-  }
+  status.textContent = `取得完了：${markers.length} 件（地震データ）`;
+
+  // 地図を最新の地震に移動
+  map.setView([latestLat, latestLon], 6);
 };
 
 
-// ========== RAW JSON トグル ==========
-function toggleRaw(id) {
-  const el = document.getElementById(`raw_${id}`);
-  if (el.style.maxHeight) {
-    el.style.maxHeight = "";
-    el.style.overflow = "";
-  } else {
-    el.style.maxHeight = "3.5rem";
-    el.style.overflow = "hidden";
-  }
-}
-
-
-// 起動時に最適ノード選択
+// 起動時にノード選択
 selectBestNode();
 
 </script>
 
 </body>
 </html>
-
