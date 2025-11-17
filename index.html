@@ -86,7 +86,6 @@
 
   .place { font-size: 1.1rem; font-weight: 600; margin: 0.2rem 0 0.5rem; }
 
-  /* Popup */
   .leaflet-popup-content-wrapper {
     background: #ffffff;
     border: 3px solid #7c3aed;
@@ -139,20 +138,17 @@ let pendingMap = {};
 let confirmedMap = {};
 
 // -----------------------------
-// Nodewatch → fallback（スマホ対応）
+// Nodewatch → fallback
 // -----------------------------
 const NODEWATCH_URL =
   "https://nodewatch.symbol.tools/api/symbol/nodes/peer?only_ssl=true&limit=100&order=random";
 
-// 最も安定しているフォールバックノード
 const FALLBACK_NODE = "https://symbol-node.blockchain-company.net:3001";
-
 let SELECTED_NODE = null;
 
 async function selectBestNode() {
   const info = document.getElementById("nodeInfo");
 
-  // Nodewatch を 1.5秒だけ試す
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 1500);
 
@@ -160,37 +156,29 @@ async function selectBestNode() {
     const res = await fetch(NODEWATCH_URL, { signal: controller.signal });
     clearTimeout(timeoutId);
 
-    if (!res.ok) throw new Error("Nodewatch error");
+    if (!res.ok) throw new Error("Nodewatch Error");
 
     const nodes = await res.json();
     nodes.sort((a,b) => b.height - a.height);
 
     let ep = new URL(nodes[0].endpoint);
     ep.protocol = "https:";
-
     SELECTED_NODE = ep.origin;
 
-    info.innerHTML =
-      `使用ノード：<b>${SELECTED_NODE}</b><br>ブロック高：${nodes[0].height}`;
-
-    console.log("Nodewatch 成功 →", SELECTED_NODE);
+    info.innerHTML = `使用ノード：<b>${SELECTED_NODE}</b><br>ブロック高：${nodes[0].height}`;
     return;
 
   } catch (e) {
-    console.warn("Nodewatch 失敗 → fallback へ切替", e);
+    console.warn("Nodewatch失敗 → fallbackへ", e);
   }
 
-  // fallback
   SELECTED_NODE = FALLBACK_NODE;
-
   info.innerHTML =
-    `使用ノード：<b>${SELECTED_NODE}</b><br><span style="color:#e11">Nodewatch失敗 → フォールバック使用</span>`;
-
-  console.log("フォールバックノード使用:", SELECTED_NODE);
+    `使用ノード：<b>${SELECTED_NODE}</b><br><span style="color:#e11">Nodewatch失敗 → fallback使用</span>`;
 }
 
 // -----------------------------
-// HEX → UTF-8
+// Utility
 // -----------------------------
 function hexToUtf8(hex) {
   if (!hex) return "";
@@ -213,12 +201,8 @@ function parseEarthquakeJSON(msg) {
   try { return JSON.parse(raw); } catch { return null; }
 }
 
-// -----------------------------
-// 色分け
-// -----------------------------
 function getColorByShindo(shindo, isPending) {
   if (isPending) return "#ff66cc";
-
   if (shindo < 3) return "#7c3aed";
   if (shindo < 4) return "#5b21b6";
   if (shindo < 5) return "#f97316";
@@ -227,7 +211,7 @@ function getColorByShindo(shindo, isPending) {
 }
 
 // -----------------------------
-// Confirmed Data Load
+// confirmed load
 // -----------------------------
 async function loadEarthquake() {
   if (!SELECTED_NODE) return;
@@ -250,7 +234,7 @@ async function loadEarthquake() {
   const res = await fetch(url);
   const data = await res.json();
 
-  const txs = (data.data || []).slice(0, 20);
+  const txs = (data.data || []);
 
   let first = true;
   let firstLat = 36.5, firstLon = 137.5;
@@ -277,7 +261,7 @@ async function loadEarthquake() {
 }
 
 // -----------------------------
-// UI追加
+// add UI item
 // -----------------------------
 function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
   const eq = j.earthquake;
@@ -302,7 +286,7 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
 
   if (isPending) {
     map.setView([hypo.latitude, hypo.longitude], 7, { animate:true });
-    setTimeout(()=>marker.openPopup(), 300);
+    setTimeout(() => marker.openPopup(), 300);
   }
 
   markers.push(marker);
@@ -339,7 +323,7 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
 }
 
 // -----------------------------
-// 未承認 → 承認へ更新
+// pending → confirmed update
 // -----------------------------
 function promotePendingToConfirmed(hash, j) {
   const entry = pendingMap[hash];
@@ -381,8 +365,7 @@ function addCallback(channel, callback) {
 }
 
 function startWebSocket() {
-  const wsUrl = SELECTED_NODE.replace("https","wss") + "/ws";
-  console.log("WS connecting:", wsUrl);
+  const wsUrl = SELECTED_NODE.replace("https", "wss") + "/ws";
 
   ws = new WebSocket(wsUrl);
 
@@ -394,11 +377,10 @@ function startWebSocket() {
       subscribeChannels();
       return;
     }
-    if (funcs[data.topic]) funcs[data.topic].forEach(f=>f(data.data));
+    if (funcs[data.topic]) funcs[data.topic].forEach(f => f(data.data));
   };
 
   ws.onclose = () => {
-    console.warn("WS closed → reconnecting...");
     uid = "";
     funcs = {};
     setTimeout(startWebSocket, 1500);
@@ -408,7 +390,6 @@ function startWebSocket() {
 function subscribeChannels() {
   const address = "NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ";
 
-  // ---- 未承認 ----
   let ch1 = ListenerChannelName.unconfirmedAdded + "/" + address;
   addCallback(ch1, (txObj)=>{
     const tx = txObj.transaction;
@@ -418,11 +399,9 @@ function subscribeChannels() {
 
     const ui = addEarthquakeToUI(j, true, txObj.meta.hash, true);
     pendingMap[txObj.meta.hash] = ui;
-    console.log("未承認", txObj.meta.hash);
   });
   ws.send(JSON.stringify({ uid, subscribe: ch1 }));
 
-  // ---- 承認 ----
   let ch2 = ListenerChannelName.confirmedAdded + "/" + address;
   addCallback(ch2, (txObj)=>{
     const hash = txObj.meta.hash;
@@ -433,30 +412,32 @@ function subscribeChannels() {
 
     confirmedMap[hash] = j;
     promotePendingToConfirmed(hash, j);
-    console.log("承認", hash);
   });
   ws.send(JSON.stringify({ uid, subscribe: ch2 }));
 
-  // ---- ブロック（安定用）----
   let ch3 = ListenerChannelName.block;
-  addCallback(ch3, (block)=>{});
+  addCallback(ch3, ()=>{});
   ws.send(JSON.stringify({ uid, subscribe: ch3 }));
 }
 
 // -----------------------------
-// 初期処理
+// 初期処理（← Notification 保護済み）
 // -----------------------------
 window.onload = async () => {
-  if (Notification.permission === "default") {
-    Notification.requestPermission();
+
+  // iPhone Safari 対策：Notification 安全チェック
+  if (typeof Notification !== "undefined") {
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
   }
 
   await selectBestNode();
   await loadEarthquake();
+
   startWebSocket();
 };
 
-// 更新ボタン
 document.getElementById("load").onclick = loadEarthquake;
 
 </script>
