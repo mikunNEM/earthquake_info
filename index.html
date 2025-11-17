@@ -177,9 +177,12 @@ function parseEarthquakeJSON(msg) {
   try { return JSON.parse(raw); } catch { return null; }
 }
 
-// ========== データ取得 ==========
-document.getElementById("load").onclick = async () => {
-  if (!SELECTED_NODE) return alert("ノード準備中です");
+// ========== 地震データ読み込み関数 ==========
+async function loadEarthquake() {
+  if (!SELECTED_NODE) {
+    console.warn("ノード準備中…");
+    return;
+  }
 
   const list = document.getElementById("list");
   const status = document.getElementById("status");
@@ -238,32 +241,12 @@ document.getElementById("load").onclick = async () => {
 
     markers.push(marker);
 
-    // ---- 1行情報 ----
-    const lineInfo = [
-      `${hypo.longitude} / ${hypo.latitude}`,
-      `深さ${hypo.depth}km`,
-      `M${hypo.magnitude}`,
-      `震度${shindo}`,
-      `津波: 国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}`,
-      `発表: ${issue.time} (${issue.type} / ${issue.source})`
-    ].join("・");
-
-    // ---- ハッシュ ----
-    const txHash = item.meta?.hash ?? null;
-
-    let explorerLink =
-      `<span class="badgeSymbol" style="opacity:0.5;">No Hash</span>`;
-
-    if (txHash) {
-      explorerLink = `
-        <a class="badgeSymbol"
-          href="https://symbol.fyi/transactions/${txHash}"
-          target="_blank">
-          Symbol Explorer
-        </a>`;
-    }
-
     // ---- カード ----
+    const txHash = item.meta?.hash;
+    const explorerLink = txHash
+      ? `<a class="badgeSymbol" href="https://symbol.fyi/transactions/${txHash}" target="_blank">Symbol Explorer</a>`
+      : `<span class="badgeSymbol" style="opacity:0.5;">No Hash</span>`;
+
     const card = document.createElement("div");
     card.className = "eqCard";
 
@@ -272,15 +255,14 @@ document.getElementById("load").onclick = async () => {
         <div class="eqTime">${eq.time}</div>
         ${explorerLink}
       </div>
-
       <div class="place">${hypo.name}</div>
-
       <div style="font-size:0.9rem; line-height:1.4; color:#444;">
-        ${lineInfo}
+        深さ${hypo.depth}km・M${hypo.magnitude}・震度${shindo}<br>
+        津波: 国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}
       </div>
     `;
 
-    /* ★★★ マウスオーバー → クリックに変更 ★★★ */
+    // カードクリックでマップ移動＋ポップアップ
     card.onclick = () => {
       map.setView([hypo.latitude, hypo.longitude], 8, { animate: true });
       marker.openPopup();
@@ -291,11 +273,13 @@ document.getElementById("load").onclick = async () => {
 
   status.textContent = `取得完了：${txs.length} 件（最新20件）`;
   map.setView([firstLat, firstLon], 6);
+}
+
+// ========== ページロード時に自動実行 ==========
+window.onload = async () => {
+  await selectBestNode();
+  await loadEarthquake();
 };
-
-// 起動時にノード選択
-selectBestNode();
 </script>
-
 </body>
 </html>
