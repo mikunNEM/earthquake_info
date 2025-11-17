@@ -270,11 +270,11 @@ document.getElementById("load").onclick = async () => {
       </div>
     `;
 
-    card.onmouseover = () => {
+    /* ★★★ マウスオーバー → クリックに変更 ★★★ */
+    card.onclick = () => {
       map.setView([hypo.latitude, hypo.longitude], 8, { animate: true });
       marker.openPopup();
     };
-    card.onmouseout = () => marker.closePopup();
 
     list.appendChild(card);
   });
