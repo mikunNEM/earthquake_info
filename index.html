@@ -84,20 +84,10 @@
     .eqTime { font-size: 1.05rem; font-weight: 600; }
     .badgeSymbol {
       background: #7c3aed; color: white; padding: 2px 8px;
-      border-radius: 6px; font-size: 0.72rem;
+      border-radius: 6px; font-size: 0.72rem; cursor: pointer;
     }
 
     .place { font-size: 1.1rem; font-weight: 600; margin: 0.2rem 0 0.5rem; }
-
-    .shindo {
-      padding: 2px 5px; border-radius: 4px; color: #fff; font-weight: 700;
-    }
-    .s10 { background:#d93025; }
-    .s20 { background:#ea4335; }
-    .s30 { background:#fbbc04; color:#000; }
-    .s40 { background:#34a853; }
-    .s50 { background:#4285f4; }
-    .s60 { background:#673ab7; }
 
   </style>
 </head>
@@ -220,7 +210,7 @@ document.getElementById("load").onclick = async () => {
     const hypo = eq.hypocenter;
     const issue = j.issue ?? {};
 
-    const shindo = eq.maxScale * 0.1;  // ★★ 正しい震度に補正 ★★
+    const shindo = eq.maxScale * 0.1;
 
     if (first) {
       firstLat = hypo.latitude;
@@ -255,6 +245,16 @@ document.getElementById("load").onclick = async () => {
 
     markers.push(marker);
 
+    // ★ 1行地震情報を生成
+    const lineInfo = `
+      ${hypo.longitude} / ${hypo.latitude}・
+      深さ${hypo.depth}km・
+      M${hypo.magnitude}・
+      震度${shindo}・
+      津波: 国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}・
+      発表: ${issue.time} (${issue.type} / ${issue.source})
+    `;
+
     // カード
     const card = document.createElement("div");
     card.className = "eqCard";
@@ -262,17 +262,20 @@ document.getElementById("load").onclick = async () => {
     card.innerHTML = `
       <div class="eqHeader">
         <div class="eqTime">${eq.time}</div>
-        <div class="badgeSymbol">Symbol Blockchain</div>
+
+        <a class="badgeSymbol"
+           href="https://symbol.fyi/transactions/${tx.transactionInfo.hash}"
+           target="_blank"
+           style="text-decoration:none; color:white;">
+           Symbol Explorer
+        </a>
       </div>
 
       <div class="place">${hypo.name}</div>
 
-      経度/緯度：${hypo.longitude}, ${hypo.latitude}<br>
-      深さ：${hypo.depth} km<br>
-      M${hypo.magnitude}<br>
-      最大震度：<span class="shindo s${eq.maxScale}">${shindo}</span><br>
-      津波：国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}<br>
-      発表：${issue.time} (${issue.type} / ${issue.source})
+      <div style="font-size:0.9rem; line-height:1.4; color:#444;">
+        ${lineInfo}
+      </div>
     `;
 
     card.onmouseover = () => {
