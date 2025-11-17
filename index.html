@@ -358,7 +358,7 @@ document.getElementById("load").onclick = async () => {
       const popupHtml = `
         <b>${hypo.name}</b><br>
         ${eq.time}<br>
-        M${hypo.magnitude} / 最大震度 ${eq.maxScale}<br>
+        M${hypo.magnitude} / 最大震度 ${eq.maxScale*0.1}<br>
         津波：国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}<br>
         発表：${issue.time}
       `;
