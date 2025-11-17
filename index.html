@@ -110,7 +110,7 @@
 
     <div class="inputCard">
 
-      <button id="load">地震情報を取得</button>
+      <button id="load">地震情報を更新</button>
       <div id="status" style="margin-top:6px;font-size:0.85rem;color:#555;"></div>
     </div>
 
@@ -280,6 +280,12 @@ window.onload = async () => {
   await selectBestNode();
   await loadEarthquake();
 };
+  
+// ========== 更新ボタン（リロード） ==========
+document.getElementById("load").onclick = () => {
+  location.reload();
+};
+
 </script>
 </body>
 </html>
