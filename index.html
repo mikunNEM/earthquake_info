@@ -109,8 +109,7 @@
     <div class="nodeStatus" id="nodeInfo">ノード選択中…</div>
 
     <div class="inputCard">
-      <label>対象アドレス</label>
-      <input id="addr" value="NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ" />
+
       <button id="load">地震情報を取得</button>
       <div id="status" style="margin-top:6px;font-size:0.85rem;color:#555;"></div>
     </div>
@@ -184,7 +183,7 @@ document.getElementById("load").onclick = async () => {
 
   const list = document.getElementById("list");
   const status = document.getElementById("status");
-  const address = document.getElementById("addr").value;
+  const address = "NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ";
 
   list.innerHTML = "";
   status.textContent = "取得中…";
