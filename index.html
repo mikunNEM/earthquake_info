@@ -190,11 +190,11 @@ document.getElementById("load").onclick = async () => {
   markers = [];
 
   const url =
-    `${SELECTED_NODE}/transactions/confirmed?address=${addr.value}&pageSize=200&order=desc`;
+    `${SELECTED_NODE}/transactions/confirmed?address=${addr.value}&pageSize=20&order=desc`;
 
   const res = await fetch(url);
   const data = await res.json();
-  const txs = (data.data || []).slice(0, 20);  // ★★ 最新20件だけに制限 ★★
+  const txs = (data.data || []).slice(0, 20);
 
   let firstLat = 36.5;
   let firstLon = 137.5;
@@ -204,12 +204,12 @@ document.getElementById("load").onclick = async () => {
     const tx = item.transaction;
     const msg = hexToUtf8(extractMsg(tx));
     const j = parseEarthquakeJSON(msg);
+
     if (!j || !j.earthquake) return;
 
     const eq = j.earthquake;
     const hypo = eq.hypocenter;
     const issue = j.issue ?? {};
-
     const shindo = eq.maxScale * 0.1;
 
     if (first) {
@@ -226,7 +226,7 @@ document.getElementById("load").onclick = async () => {
     else if (shindo >= 3) color = "#fbbc04";
     else if (shindo >= 2) color = "#ea4335";
 
-    // マーカー
+    // ---- マーカー ----
     const marker = L.circleMarker(
       [hypo.latitude, hypo.longitude],
       { radius: 8, fillColor: color, color: "#fff", fillOpacity: 0.9 }
@@ -245,17 +245,19 @@ document.getElementById("load").onclick = async () => {
 
     markers.push(marker);
 
-    // ★ 1行地震情報を生成
-    const lineInfo = `
-      ${hypo.longitude} / ${hypo.latitude}・
-      深さ${hypo.depth}km・
-      M${hypo.magnitude}・
-      震度${shindo}・
-      津波: 国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}・
-      発表: ${issue.time} (${issue.type} / ${issue.source})
-    `;
+    // ---- 1行地震情報 ----
+    const lineInfo = [
+      `${hypo.longitude} / ${hypo.latitude}`,
+      `深さ${hypo.depth}km`,
+      `M${hypo.magnitude}`,
+      `震度${shindo}`,
+      `津波: 国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}`,
+      `発表: ${issue.time} (${issue.type} / ${issue.source})`
+    ].join("・");
 
-    // カード
+    // ---- カード ----
+    const txHash = item.meta.hash;
+
     const card = document.createElement("div");
     card.className = "eqCard";
 
@@ -264,9 +266,8 @@ document.getElementById("load").onclick = async () => {
         <div class="eqTime">${eq.time}</div>
 
         <a class="badgeSymbol"
-           href="https://symbol.fyi/transactions/${tx.transactionInfo.hash}"
-           target="_blank"
-           style="text-decoration:none; color:white;">
+           href="https://symbol.fyi/transactions/${txHash}"
+           target="_blank">
            Symbol Explorer
         </a>
       </div>
