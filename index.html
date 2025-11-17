@@ -389,7 +389,7 @@ document.getElementById("load").onclick = async () => {
         経度/緯度：${hypo.longitude}, ${hypo.latitude}<br>
         深さ：${hypo.depth} km<br>
         M${hypo.magnitude}<br>
-        最大震度：<span class="shindo s${s}">${eq.maxScale}</span><br>
+        最大震度：<span class="shindo s${s}">${eq.maxScale*0.1}</span><br>
         津波：国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}<br>
         発表：${issue.time} (${issue.type} / ${issue.source})
       `;
