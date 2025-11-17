@@ -261,12 +261,21 @@ async function loadEarthquake() {
 }
 
 // -----------------------------
-// add UI item
+// add UI item（★マイナス値フィルタ追加済み）
 // -----------------------------
 function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
   const eq = j.earthquake;
   const hypo = eq.hypocenter;
-  const shindo = eq.maxScale * 0.1;
+
+  const depth  = Number(hypo.depth);
+  const mag    = Number(hypo.magnitude);
+  const shindo = Number(eq.maxScale) * 0.1;
+
+  // --- ★マイナス値の地震データはスキップ ---
+  if (depth < 0 || mag < 0 || shindo < 0) {
+    console.warn("⚠ 異常値のためスキップ:", { depth, mag, shindo });
+    return null;
+  }
 
   const list = document.getElementById("list");
   const color = getColorByShindo(shindo, isPending);
@@ -421,11 +430,10 @@ function subscribeChannels() {
 }
 
 // -----------------------------
-// 初期処理（← Notification 保護済み）
+// 初期処理
 // -----------------------------
 window.onload = async () => {
 
-  // iPhone Safari 対策：Notification 安全チェック
   if (typeof Notification !== "undefined") {
     if (Notification.permission === "default") {
       Notification.requestPermission();
