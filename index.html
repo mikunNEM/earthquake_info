@@ -129,6 +129,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       border-left: 6px solid #7c3aed;
       cursor: pointer;
+      transition: background 0.15s ease;
     }
     .eqCard:hover {
       background: #fafaff;
@@ -208,7 +209,6 @@
 </div>
 
 <script>
-
 // ========== Leaflet 地図初期化 ==========
 let map = L.map('map').setView([36.5, 137.5], 5);
 
@@ -224,20 +224,20 @@ L.tileLayer(
 
 let markers = [];  // 地震マーカーを保持
 
-
 // ========== Symbol ノードウォッチ ==========
 const NODEWATCH_URL =
   "https://nodewatch.symbol.tools/api/symbol/nodes/peer?only_ssl=true&limit=100&order=random";
 
 let SELECTED_NODE = null;
 
-
+// HEX → UTF-8
 function hexToUtf8(hex) {
   if (!hex) return "";
   if (hex.length % 2) hex = "0" + hex;
   const bytes = new Uint8Array(hex.match(/.{1,2}/g).map(b => parseInt(b,16)));
   try { return new TextDecoder().decode(bytes); } catch { return ""; }
 }
+
 function extractMsg(tx) {
   if (!tx.message) return "";
   if (typeof tx.message === "string") return tx.message;
@@ -245,145 +245,178 @@ function extractMsg(tx) {
   return "";
 }
 
-
 // JSON 自動修復
 function parseEarthquakeJSON(msg) {
   if (!msg) return null;
   let raw = msg.trim();
 
+  // 外側ダブルクォート除去
   if (raw.startsWith('"') && raw.endsWith('"')) {
     raw = raw.slice(1, -1);
   }
+  // エスケープ解除
   raw = raw.replace(/\\"/g, '"');
+  // 制御文字除去
   raw = raw.replace(/[\u0000-\u001F]+/g, "");
 
   try { return JSON.parse(raw); }
   catch { return null; }
 }
 
-
 // ノード選択
 async function selectBestNode() {
   const info = document.getElementById("nodeInfo");
 
-  const res = await fetch(NODEWATCH_URL);
-  const nodes = await res.json();
-
-  nodes.sort((a,b)=> Number(b.height||0) - Number(a.height||0));
-  const best = nodes[0];
-
-  let ep = best.endpoint;
   try {
-    const u = new URL(ep);
-    u.protocol = "https:";
-    ep = u.origin;
-  } catch {}
+    const res = await fetch(NODEWATCH_URL);
+    const nodes = await res.json();
 
-  SELECTED_NODE = ep;
-  info.innerHTML = `使用ノード：<b>${ep}</b><br>ブロック高：${best.height}`;
+    nodes.sort((a,b)=> Number(b.height||0) - Number(a.height||0));
+    const best = nodes[0];
+
+    let ep = best.endpoint;
+    try {
+      const u = new URL(ep);
+      u.protocol = "https:";
+      ep = u.origin;
+    } catch {}
+
+    SELECTED_NODE = ep;
+    info.innerHTML = `使用ノード：<b>${ep}</b><br>ブロック高：${best.height}`;
+  } catch (e) {
+    info.innerHTML = `<span style="color:red;">ノード取得エラー: ${e.message}</span>`;
+  }
 }
-
 
 // 地震データ取得
 document.getElementById("load").onclick = async () => {
+  if (!SELECTED_NODE) {
+    alert("ノード選択中です。数秒待ってから再度お試しください。");
+    return;
+  }
 
   const list = document.getElementById("list");
   const status = document.getElementById("status");
   list.innerHTML = "";
   status.textContent = "取得中…";
 
-  markers.forEach(m => map.removeLayer(m)); // 古いマーカー削除
+  // 古いマーカー削除
+  markers.forEach(m => map.removeLayer(m));
   markers = [];
 
-  const addr = document.getElementById("addr").value;
+  const addr = document.getElementById("addr").value.trim();
   const url = `${SELECTED_NODE}/transactions/confirmed?address=${addr}&pageSize=100&order=desc`;
 
-  const res = await fetch(url);
-  const data = await res.json();
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
 
-  const txs = data.data || [];
-  let latestLat = 36.5;
-  let latestLon = 137.5;
-  let first = true;
+    const txs = data.data || [];
+    let latestLat = 36.5;
+    let latestLon = 137.5;
+    let first = true;
 
-  txs.forEach(item => {
-    const tx = item.transaction;
-    const msg = hexToUtf8(extractMsg(tx));
-    const j = parseEarthquakeJSON(msg);
+    txs.forEach(item => {
+      const tx = item.transaction;
+      const msg = hexToUtf8(extractMsg(tx));
+      const j = parseEarthquakeJSON(msg);
 
-    if (!j || !j.earthquake) return;
+      if (!j || !j.earthquake) return;
 
-    const eq = j.earthquake;
-    const issue = j.issue || {};
+      const eq = j.earthquake;
+      const issue = j.issue || {};
+      const hypo = eq.hypocenter;
 
-    // 最新の地震を地図中央にする
-    if (first) {
-      latestLat = eq.hypocenter.latitude;
-      latestLon = eq.hypocenter.longitude;
-      first = false;
-    }
-
-    // 震度色
-    const s = Number(eq.maxScale);
-    let color = "#d93025";
-    if (s >= 50) color = "#673ab7";
-    else if (s >= 40) color = "#4285f4";
-    else if (s >= 30) color = "#fbbc04";
-    else if (s >= 20) color = "#ea4335";
-
-    // Leaflet マーカー
-    const marker = L.circleMarker(
-      [eq.hypocenter.latitude, eq.hypocenter.longitude],
-      {
-        radius: 8,
-        fillColor: color,
-        color: "#fff",
-        weight: 1,
-        fillOpacity: 0.9
+      // 最新の地震を地図中央にする用
+      if (first) {
+        latestLat = hypo.latitude;
+        latestLon = hypo.longitude;
+        first = false;
       }
-    )
-      .addTo(map)
-      .bindPopup(`
-        <b>${eq.hypocenter.name}</b><br>
+
+      // 震度色
+      const s = Number(eq.maxScale);
+      let color = "#d93025";
+      if (s >= 50) color = "#673ab7";
+      else if (s >= 40) color = "#4285f4";
+      else if (s >= 30) color = "#fbbc04";
+      else if (s >= 20) color = "#ea4335";
+
+      // Leaflet マーカー
+      const marker = L.circleMarker(
+        [hypo.latitude, hypo.longitude],
+        {
+          radius: 8,
+          fillColor: color,
+          color: "#fff",
+          weight: 1,
+          fillOpacity: 0.9
+        }
+      ).addTo(map);
+
+      // ポップアップ内容（震度 & 津波情報あり）
+      const popupHtml = `
+        <b>${hypo.name}</b><br>
         ${eq.time}<br>
-        M${eq.hypocenter.magnitude} / 最大震度 ${eq.maxScale}
-      `);
+        M${hypo.magnitude} / 最大震度 ${eq.maxScale}<br>
+        津波：国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}<br>
+        発表：${issue.time}
+      `;
+      marker.bindPopup(popupHtml);
 
-    markers.push(marker);
+      // マーカーをマウスオーバーでポップアップ
+      marker.on("mouseover", function () {
+        this.openPopup();
+      });
+      marker.on("mouseout", function () {
+        this.closePopup();
+      });
 
-    // カード生成
-    const card = document.createElement("div");
-    card.className = "eqCard";
-    card.onclick = () => map.setView([eq.hypocenter.latitude, eq.hypocenter.longitude], 8);
+      markers.push(marker);
 
-    card.innerHTML = `
-      <div class="eqHeader">
-        <div class="eqTime">${eq.time}</div>
-        <div class="badgeSymbol">Symbol Blockchain</div>
-      </div>
+      // カード生成
+      const card = document.createElement("div");
+      card.className = "eqCard";
 
-      <div class="place">${eq.hypocenter.name}</div>
+      card.innerHTML = `
+        <div class="eqHeader">
+          <div class="eqTime">${eq.time}</div>
+          <div class="badgeSymbol">Symbol Blockchain</div>
+        </div>
 
-      経度/緯度：${eq.hypocenter.longitude}, ${eq.hypocenter.latitude}<br>
-      深さ：${eq.hypocenter.depth} km<br>
-      M${eq.hypocenter.magnitude}<br>
-      最大震度：<span class="shindo s${s}">${s}</span><br>
-      発表：${issue.time} (${issue.type} / ${issue.source})
-    `;
+        <div class="place">${hypo.name}</div>
 
-    list.appendChild(card);
-  });
+        経度/緯度：${hypo.longitude}, ${hypo.latitude}<br>
+        深さ：${hypo.depth} km<br>
+        M${hypo.magnitude}<br>
+        最大震度：<span class="shindo s${s}">${eq.maxScale}</span><br>
+        津波：国内 ${eq.domesticTsunami} / 海外 ${eq.foreignTsunami}<br>
+        発表：${issue.time} (${issue.type} / ${issue.source})
+      `;
 
-  status.textContent = `取得完了：${markers.length} 件（地震データ）`;
+      // カードにマウスオーバー → 対応マーカーへ移動 & ポップアップ
+      card.addEventListener("mouseover", () => {
+        map.setView([hypo.latitude, hypo.longitude], 8, { animate: true });
+        marker.openPopup();
+      });
+      card.addEventListener("mouseout", () => {
+        marker.closePopup();
+      });
 
-  // 地図を最新の地震に移動
-  map.setView([latestLat, latestLon], 6);
+      list.appendChild(card);
+    });
+
+    status.textContent = `取得完了：${markers.length} 件（地震データ）`;
+
+    // 地図を最新の地震に移動
+    map.setView([latestLat, latestLon], 6);
+  } catch (e) {
+    status.innerHTML = `<span style="color:red;">エラー: ${e.message}</span>`;
+  }
 };
-
 
 // 起動時にノード選択
 selectBestNode();
-
 </script>
 
 </body>
