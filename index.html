@@ -125,18 +125,24 @@
 </div>
 
 <script>
-// -----------------------------
-// ✔ 津波情報変換（国内のみ）
-// -----------------------------
+// ==================================================
+// ★ 署名者フィルタ（ここだけ設定すればOK）
+// ==================================================
+const ALLOWED_PUBKEY =
+  "B1A216D31CF6A1F10F393064DD1A447F02AE327FC27359DDC32B07B56021326E";
+
+// ==================================================
+// 津波変換
+// ==================================================
 function translateDomesticTsunami(str) {
   if (!str) return "津波の心配なし";
   if (["None", "Unknown", "Checking"].includes(str)) return "津波の心配なし";
   return str;
 }
 
-// -----------------------------
+// ==================================================
 // Leaflet MAP
-// -----------------------------
+// ==================================================
 let map = L.map('map').setView([36.5, 137.5], 5);
 L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png", {
   attribution: "地理院タイル", maxZoom: 18, minZoom: 3
@@ -146,13 +152,13 @@ let markers = [];
 let pendingMap = {};
 let confirmedMap = {};
 
-// -----------------------------
+// ==================================================
 // Nodewatch → fallback
-// -----------------------------
+// ==================================================
 const NODEWATCH_URL =
   "https://nodewatch.symbol.tools/api/symbol/nodes/peer?only_ssl=true&limit=100&order=random";
 
-const FALLBACK_NODE = "https://symbol-node.blockchain-company.net:3001";
+const FALLBACK_NODE = "https://symbol-mikun.net:3001";
 let SELECTED_NODE = null;
 
 async function selectBestNode() {
@@ -186,9 +192,9 @@ async function selectBestNode() {
     `使用ノード：<b>${SELECTED_NODE}</b><br><span style="color:#e11">Nodewatch失敗 → fallback使用</span>`;
 }
 
-// -----------------------------
+// ==================================================
 // Utility
-// -----------------------------
+// ==================================================
 function hexToUtf8(hex) {
   if (!hex) return "";
   if (hex.length % 2) hex = "0" + hex;
@@ -219,9 +225,9 @@ function getColorByShindo(shindo, isPending) {
   return "#b91c1c";
 }
 
-// -----------------------------
-// confirmed load
-// -----------------------------
+// ==================================================
+// confirmed load（★フィルタ追加済み）
+// ==================================================
 async function loadEarthquake() {
   if (!SELECTED_NODE) return;
 
@@ -250,6 +256,12 @@ async function loadEarthquake() {
 
   txs.forEach(item => {
     const tx = item.transaction;
+
+    // =================================
+    // ★ signerPublicKey フィルタ
+    // =================================
+    if (tx.signerPublicKey !== ALLOWED_PUBKEY) return;
+
     const msg = hexToUtf8(extractMsg(tx));
     const j = parseEarthquakeJSON(msg);
     if (!j || !j.earthquake) return;
@@ -269,9 +281,9 @@ async function loadEarthquake() {
   map.setView([firstLat, firstLon], 6);
 }
 
-// -----------------------------
-// add UI item（★津波表示修正済み）
-// -----------------------------
+// ==================================================
+// add UI item
+// ==================================================
 function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
   const eq = j.earthquake;
   const hypo = eq.hypocenter;
@@ -280,7 +292,6 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
   const mag    = Number(hypo.magnitude);
   const shindo = Number(eq.maxScale) * 0.1;
 
-  // --- マイナス値をスキップ ---
   if (depth < 0 || mag < 0 || shindo < 0) {
     console.warn("⚠ 異常値のためスキップ:", { depth, mag, shindo });
     return null;
@@ -342,9 +353,9 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
   return { marker, card };
 }
 
-// -----------------------------
+// ==================================================
 // pending → confirmed update
-// -----------------------------
+// ==================================================
 function promotePendingToConfirmed(hash, j) {
   const entry = pendingMap[hash];
   if (!entry) return;
@@ -365,7 +376,6 @@ function promotePendingToConfirmed(hash, j) {
   card.querySelector(".badgeSymbol").outerHTML =
     `<a class="badgeSymbol" href="https://symbol.fyi/transactions/${hash}" target="_blank">Symbol Explorer</a>`;
 
-  // 津波の表示部分だけ更新する
   const infoDiv = card.querySelector("div[style]");
   infoDiv.innerHTML =
     `深さ ${hypo.depth}km・M${hypo.magnitude}・震度 ${shindo}<br>
@@ -374,9 +384,9 @@ function promotePendingToConfirmed(hash, j) {
   delete pendingMap[hash];
 }
 
-// -----------------------------
-// WebSocket Listener
-// -----------------------------
+// ==================================================
+// WebSocket Listener（★フィルタ追加済み）
+// ==================================================
 const ListenerChannelName = {
   unconfirmedAdded: "unconfirmedAdded",
   confirmedAdded:   "confirmedAdded",
@@ -418,10 +428,16 @@ function startWebSocket() {
 function subscribeChannels() {
   const address = "NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ";
 
-  // 未承認
+  // -------------------------------
+  // 未承認（★署名者フィルタあり）
+  // -------------------------------
   let ch1 = ListenerChannelName.unconfirmedAdded + "/" + address;
   addCallback(ch1, (txObj)=>{
     const tx = txObj.transaction;
+
+    // ★ signerPublicKey フィルタ
+    if (tx.signerPublicKey !== ALLOWED_PUBKEY) return;
+
     const msg = hexToUtf8(extractMsg(tx));
     const j = parseEarthquakeJSON(msg);
     if (!j || !j.earthquake) return;
@@ -431,11 +447,17 @@ function subscribeChannels() {
   });
   ws.send(JSON.stringify({ uid, subscribe: ch1 }));
 
-  // 承認済み
+  // -------------------------------
+  // 承認済み（★署名者フィルタあり）
+  // -------------------------------
   let ch2 = ListenerChannelName.confirmedAdded + "/" + address;
   addCallback(ch2, (txObj)=>{
     const hash = txObj.meta.hash;
     const tx = txObj.transaction;
+
+    // ★ signerPublicKey フィルタ
+    if (tx.signerPublicKey !== ALLOWED_PUBKEY) return;
+
     const msg = hexToUtf8(extractMsg(tx));
     const j = parseEarthquakeJSON(msg);
     if (!j || !j.earthquake) return;
@@ -445,25 +467,18 @@ function subscribeChannels() {
   });
   ws.send(JSON.stringify({ uid, subscribe: ch2 }));
 
-  // ブロック
+  // ブロック通知（未使用）
   let ch3 = ListenerChannelName.block;
   addCallback(ch3, ()=>{});
   ws.send(JSON.stringify({ uid, subscribe: ch3 }));
 }
 
-// -----------------------------
+// ==================================================
 // 初期処理
-// -----------------------------
+// ==================================================
 window.onload = async () => {
-  if (typeof Notification !== "undefined") {
-    if (Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }
-
   await selectBestNode();
   await loadEarthquake();
-
   startWebSocket();
 };
 
