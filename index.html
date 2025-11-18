@@ -267,7 +267,7 @@ async function loadEarthquake() {
   confirmedMap = {};
 
   const url =
-    `${SELECTED_NODE}/transactions/confirmed?address=${address}&pageSize=20&order=desc`;
+    `${SELECTED_NODE}/transactions/confirmed?address=${address}&pageSize=50&order=desc`;
 
   const res = await fetch(url);
   const data = await res.json();
