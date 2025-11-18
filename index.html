@@ -102,7 +102,7 @@
 
 <header>
   <h1>Symbol Earthquake Viewer</h1>
-  <div class="sub">気象庁の地震情報を Symbol ブロックチェーンに刻んだデータを表示</div>
+  <div class="sub">Symbolブロックチェーンに記録した気象庁の地震情報をリアルタイムで表示します</div>
 </header>
 
 <div class="main">
@@ -111,7 +111,7 @@
     <div class="nodeStatus" id="nodeInfo">ノード選択中…</div>
 
     <div class="inputCard">
-      <button id="load">地震情報を更新</button>
+    <!--  <button id="load">地震情報を更新</button> -->
       <div id="status" style="margin-top:6px;font-size:0.85rem;color:#555;"></div>
     </div>
 
@@ -297,7 +297,7 @@ async function loadEarthquake() {
     addEarthquakeToUI(j, false, item.meta.hash, false);
   });
 
-  status.textContent = `取得完了：${txs.length}件`;
+  status.textContent = `取得完了：最新${txs.length}件`;
   map.setView([firstLat, firstLon], 6);
 }
 
