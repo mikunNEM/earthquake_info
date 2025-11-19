@@ -413,10 +413,13 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
     </div>
   `;
 
-  card.onclick = () => {
-    map.setView([hypo.latitude, hypo.longitude], 8,{animate:true});
+card.onclick = () => {
+  map.setView([hypo.latitude, hypo.longitude], 9, { animate:true });
+
+  setTimeout(() => {
     marker.openPopup();
-  };
+  }, 250);
+};
 
   insertTop ? list.prepend(card) : list.appendChild(card);
 
