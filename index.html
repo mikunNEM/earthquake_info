@@ -373,19 +373,37 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
   const list = document.getElementById("list");
   const color = getColorByShindo(shindo, isPending);
 
+  // ================================
+  // マーカー生成
+  // ================================
   const marker = L.circleMarker(
     [hypo.latitude, hypo.longitude],
     { radius: isPending ? 12 :9, fillColor: color, color:"#fff", fillOpacity:0.95 }
   ).addTo(map);
 
-  marker.bindPopup(`
+  // ポップアップ（内容）
+  const popupHtml = `
     <b>${hypo.name}</b><br>
     ${eq.time.slice(0, -3)}${isPending ? "<span style='color:#ff0080;'>(NEW)</span>":""}<br>
     <b>M${hypo.magnitude}</b>・震度 ${shindo}<br>
     深さ ${hypo.depth}km<br>
     津波：${domestic}
-  `);
+  `;
 
+  marker.bindPopup(popupHtml);
+
+  // ===================================================
+  // ★ ポップアップ枠の色を震度カラーに変更する処理 ★
+  // ===================================================
+  marker.on("popupopen", () => {
+    const popupEl = document.querySelector(".leaflet-popup-content-wrapper");
+    const tipEl   = document.querySelector(".leaflet-popup-tip");
+
+    if (popupEl) popupEl.style.border = `3px solid ${color}`;
+    if (tipEl)   tipEl.style.border   = `3px solid ${color}`;
+  });
+
+  // 新規検知時の動作
   if (isPending){
     map.setView([hypo.latitude, hypo.longitude], 7,{animate:true});
     setTimeout(()=>marker.openPopup(),300);
@@ -393,6 +411,9 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
 
   markers.push(marker);
 
+  // ================================
+  // カードUI（左リスト）
+  // ================================
   const card = document.createElement("div");
   card.className="eqCard";
   card.style.borderLeftColor = color;
@@ -413,19 +434,22 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
     </div>
   `;
 
-card.onclick = () => {
-  map.setView([hypo.latitude, hypo.longitude], 7, { animate:true });
+  // 左リスト → クリックで中央へ移動
+  card.onclick = () => {
+    // ★ 中央にしっかり寄せるため ズーム9 を採用 ★
+    map.setView([hypo.latitude, hypo.longitude], 9, { animate:true });
 
-  setTimeout(() => {
-    marker.openPopup();
-  }, 250);
-};
+    setTimeout(() => {
+      marker.openPopup();
+    }, 250);
+  };
 
   insertTop ? list.prepend(card) : list.appendChild(card);
 
   if (isPending) pendingMap[hash] = { marker, card };
   return { marker, card };
 }
+
 
 // ==================================================
 // pending → confirmed
