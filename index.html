@@ -323,25 +323,40 @@ async function loadEarthquake() {
 
   txs.forEach(item=>{
     const tx = item.transaction;
+
+    // フィルタ：署名者が違う → 完全に無視（初期位置にも使わない）
     if (tx.signerPublicKey !== ALLOWED_PUBKEY) return;
 
     const msg = hexToUtf8(extractMsg(tx));
     const j = parseEarthquakeJSON(msg);
     if (!j || !j.earthquake) return;
 
-    confirmedMap[item.meta.hash] = j;
+    // UIに追加（※無効データの場合は null）
+    const added = addEarthquakeToUI(j, false, item.meta.hash, false);
 
-    if (first){
+    // 追加できたデータだけを confirmedMap に入れる
+    if (added) confirmedMap[item.meta.hash] = j;
+
+    // 追加できた地震だけ初期位置として採用する
+    if (added && first){
       firstLat = j.earthquake.hypocenter.latitude;
       firstLon = j.earthquake.hypocenter.longitude;
       first = false;
     }
-
-    addEarthquakeToUI(j, false, item.meta.hash, false);
   });
 
   status.textContent = `取得完了：最新${txs.length}件`;
-  map.setView([firstLat, firstLon], 6);
+  // ★ 最新の地震の marker を取得
+  const latest = markers[0]; // 先頭が最新（prepend）
+
+  if (latest) {
+  // 地図移動後に少し待ってポップアップを開く
+    map.setView([firstLat, firstLon], 6, { animate: true });
+
+    setTimeout(() => {
+      latest.openPopup();
+    }, 500);
+  }
 }
 
 // ==================================================
