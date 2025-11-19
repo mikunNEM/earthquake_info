@@ -437,7 +437,7 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
   // 左リスト → クリックで中央へ移動
   card.onclick = () => {
     // ★ 中央にしっかり寄せるため ズーム9 を採用 ★
-    map.setView([hypo.latitude, hypo.longitude], 9, { animate:true });
+    map.setView([hypo.latitude, hypo.longitude], 7, { animate:true });
 
     setTimeout(() => {
       marker.openPopup();
