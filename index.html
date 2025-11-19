@@ -180,7 +180,7 @@ function showNotify(hash, j, color) {
   // クリック → その地震へズーム
   card.onclick = () => {
     const hypo = eq.hypocenter;
-    map.setView([hypo.latitude, hypo.longitude], 8, { animate:true });
+    map.setView([hypo.latitude, hypo.longitude], 7, { animate:true });
   };
 
   area.prepend(card);
@@ -414,7 +414,7 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false) {
   `;
 
 card.onclick = () => {
-  map.setView([hypo.latitude, hypo.longitude], 5, { animate:true });
+  map.setView([hypo.latitude, hypo.longitude], 7, { animate:true });
 
   setTimeout(() => {
     marker.openPopup();
