@@ -204,8 +204,18 @@ function convertShindo(code) {
 
 function translateDomesticTsunami(str) {
   if (!str) return "津波の心配なし";
-  if (["None","Unknown","Checking"].includes(str)) return "津波の心配なし";
-  return str;
+
+  const map = {
+    None: "津波の心配なし",
+    Unknown: "津波の心配なし",
+    Checking: "調査中",
+    NonEffective: "若干の海面変動の可能性",
+    Watch: "津波注意報",
+    Warning: "津波警報",
+    MajorWarning: "大津波警報",
+  };
+
+  return map[str] ?? str;
 }
 
 // ==================================================
