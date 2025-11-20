@@ -288,7 +288,20 @@ function parseEarthquakeJSON(msg) {
   try { return JSON.parse(raw); } catch { return null; }
 }
 
-function getColorByShindo(s, pending) {
+function getTsunamiColor(type) {
+  const map = {
+    NonEffective: "#60a5fa",  // 軽微
+    Watch: "#facc15",         // 注意報
+    Warning: "#f97316",       // 警報
+    MajorWarning: "#dc2626"   // 大津波警報
+  };
+  return map[type] ?? null;
+}
+
+function getColorByShindo(s, pending, tsunamiType) {
+  const tsunamiColor = getTsunamiColor(tsunamiType);
+  if (tsunamiColor) return tsunamiColor;   // 津波優先
+
   if (pending) return "#ff66cc";
   if (s<1.5) return "#60a5fa";
   if (s<2.5) return "#3b82f6";
@@ -381,9 +394,10 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false){
   const shindo = convertShindo(eq.maxScale);
   if (depth<0 || mag<=0 || shindo<=0) return null;
 
+  const tsunamiType = eq.domesticTsunami;
   const domestic = translateDomesticTsunami(eq.domesticTsunami);
   const list = document.getElementById("list");
-  const color = getColorByShindo(shindo, isPending);
+  const color = getColorByShindo(shindo, isPending, tsunamiType);
 
   // ============================
   // ★ マーカー生成
@@ -470,8 +484,9 @@ function promotePendingToConfirmed(hash, j){
   const eq = j.earthquake;
   const hypo = eq.hypocenter;
   const shindo = convertShindo(eq.maxScale);
+  const tsunamiType = eq.domesticTsunami;
   const domestic = translateDomesticTsunami(eq.domesticTsunami);
-  const color = getColorByShindo(shindo,false);
+  const color = getColorByShindo(shindo, false, tsunamiType);
 
   marker.setStyle({ fillColor:color, radius:9 });
 
@@ -543,8 +558,9 @@ function subscribeChannels(){
     if (!j||!j.earthquake) return;
 
     const hash = txObj.meta.hash;
+    const tsunamiType = j.earthquake.domesticTsunami;
     const shindo = convertShindo(j.earthquake.maxScale);
-    const color = getColorByShindo(shindo,true);
+    const color = getColorByShindo(shindo, true, tsunamiType);
 
     showNotify(hash, j, color);
     const ui = addEarthquakeToUI(j,true,hash,true);
