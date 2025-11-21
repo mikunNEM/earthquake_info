@@ -80,8 +80,15 @@
   .eqHeader { display: flex; justify-content: space-between; }
   .eqTime { font-size: 1.05rem; font-weight: 600; }
   .badgeSymbol {
-    background: #7c3aed; color: white; padding: 2px 8px;
-    border-radius: 6px; font-size: 0.72rem; cursor: pointer;
+    background: #7c3aed; color: white; padding: 4px 12px;
+    border-radius: 8px; font-size: 0.8rem; cursor: pointer;
+    text-decoration: none; display: inline-block;
+    transition: background 0.2s, transform 0.2s;
+  }
+  
+  .badgeSymbol:hover {
+    background: #6a28e8;
+    transform: translateY(-2px);
   }
 
   .place { font-size: 1.1rem; font-weight: 600; margin: 0.2rem 0 0.5rem; }
