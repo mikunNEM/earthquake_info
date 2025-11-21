@@ -587,9 +587,8 @@ function subscribeChannels(){
   // ★ ブロック監視ログ ★
   // ===============================
   addCallback(ListenerChannelName.block, (block) => {
-    console.log("[WebSocket ALIVE] New block detected:", block.height);
+    console.log("[WebSocket ALIVE] New block detected:", block.block.height);
   });
-
 
   // ブロック
   ws.send(JSON.stringify({uid,subscribe:ListenerChannelName.block}));
