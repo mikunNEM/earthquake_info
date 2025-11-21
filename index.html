@@ -583,6 +583,14 @@ function subscribeChannels(){
   });
   ws.send(JSON.stringify({uid,subscribe:ch2}));
 
+  // ===============================
+  // ★ ブロック監視ログ ★
+  // ===============================
+  addCallback(ListenerChannelName.block, (block) => {
+    console.log("[WebSocket ALIVE] New block detected:", block.height);
+  });
+
+
   // ブロック
   ws.send(JSON.stringify({uid,subscribe:ListenerChannelName.block}));
 }
