@@ -1,474 +1,547 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8" />
   <title>Symbol Earthquake Viewer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Leaflet Map -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<style>
-  body {
-    font-family: "Inter", system-ui, sans-serif;
-    margin: 0;
-    padding: 0;
-    background: #eef1f6;
-    color: #222;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-  header {
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    color: white;
-    padding: 1.2rem 1.5rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  }
-  header h1 { margin: 0; font-size: 1.4rem; font-weight: 600; }
-  header .sub { font-size: 0.9rem; opacity: 0.9; margin-top: 0.4rem; }
+  <style>
+    body {
+      font-family: "Inter", system-ui, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #eef1f6;
+      color: #222;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-  .main { flex: 1; display: flex; gap: 10px; padding: 10px; box-sizing: border-box; }
-  .leftPanel { width: 55%; overflow-y: auto; padding-right: 8px; }
-  .rightPanel {
-    width: 45%;
-    position: sticky;
-    top: 10px;
-    height: calc(100vh - 30px);
-  }
+    header {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+      padding: 1.2rem 1.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
 
-  #map {
-    width: 100%;
-    height: 100%;
-    min-height: 600px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-  }
+    header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
 
-  @media(max-width: 900px) {
-    .main { flex-direction: column-reverse; }
-    .leftPanel, .rightPanel { width: 100%; position: static; height: auto; }
-      #map { height: 400px; min-height: unset !important; }
-  }
+    header .sub {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-top: 0.4rem;
+    }
 
-  .nodeStatus {
-    background: #fff; border-left: 4px solid #7c3aed;
-    padding: 0.7rem 1rem; border-radius: 8px;
-    margin-bottom: 1.2rem; font-size: 0.9rem; color: #444;
-  }
+    .main {
+      flex: 1;
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
 
-  .inputCard {
-    background: #fff; padding: 1rem; border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 1.2rem;
-  }
+    .leftPanel {
+      width: 55%;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
 
-  button {
-    background: #4f46e5; color: #fff; border: none;
-    padding: 0.7rem 1.4rem; border-radius: 999px;
-    font-size: 0.95rem; cursor: pointer; font-weight: 600; margin-top: 0.7rem;
-  }
+    .rightPanel {
+      width: 45%;
+      position: sticky;
+      top: 10px;
+      height: calc(100vh - 30px);
+    }
 
-  .eqCard {
-    background: white; border-radius: 12px; padding: 1rem;
-    margin-bottom: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-<<<<<<< HEAD
-    border-left: 6px solid #7c3aed; cursor: pointer;
-=======
-    border-left: 10px solid #7c3aed; cursor: pointer;
->>>>>>> fec8affed2a26666c33af3349d38187d15281cde
-    transition: transform .1s ease;
-  }
-  .eqCard:hover { background: #fafaff; transform: scale(1.01); }
+    #map {
+      width: 100%;
+      height: 100%;
+      min-height: 600px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    }
 
-  .eqHeader { display: flex; justify-content: space-between; }
-  .eqTime { font-size: 1.05rem; font-weight: 600; }
-  .badgeSymbol {
-<<<<<<< HEAD
-    background: #7c3aed; color: white; padding: 2px 8px;
-    border-radius: 6px; font-size: 0.72rem; cursor: pointer;
-=======
-    background: #7c3aed; color: white; padding: 4px 12px;
-    border-radius: 8px; font-size: 0.8rem; cursor: pointer;
-    text-decoration: none; display: inline-block;
-    transition: background 0.2s, transform 0.2s;
-  }
-  
-  .badgeSymbol:hover {
-    background: #6a28e8;
-    transform: translateY(-2px);
->>>>>>> fec8affed2a26666c33af3349d38187d15281cde
-  }
+    @media(max-width: 900px) {
+      .main {
+        flex-direction: column-reverse;
+      }
 
-  .place { font-size: 1.1rem; font-weight: 600; margin: 0.2rem 0 0.5rem; }
+      .leftPanel,
+      .rightPanel {
+        width: 100%;
+        position: static;
+        height: auto;
+      }
 
-  /* Popup */
-  .leaflet-popup-content-wrapper {
-    background: #ffffff;
-    border-radius: 12px;
-  }
-  .leaflet-popup-tip { background: #ffffff; }
-  .leaflet-popup-close-button { color: #7c3aed !important; }
+      #map {
+        height: 400px;
+        min-height: unset !important;
+      }
+    }
 
-  /* ★ 通知エリア ★ */
-  #notifyArea {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    width: 260px;
-    z-index: 9999;
-  }
-  .notifyCard {
-    background: white;
-    padding: 12px 14px;
-    margin-bottom: 10px;
-    border-radius: 10px;
-    border-left: 6px solid #ff66cc;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.2);
-    font-size: 0.9rem;
-    cursor: pointer;
-    opacity: 1;
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
-  }
-  .notifyCard.hide {
-    opacity: 0;
-    transform: translateX(40px);
-  }
-</style>
+    .nodeStatus {
+      background: #fff;
+      border-left: 4px solid #7c3aed;
+      padding: 0.7rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.2rem;
+      font-size: 0.9rem;
+      color: #444;
+    }
+
+    .inputCard {
+      background: #fff;
+      padding: 1rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      margin-bottom: 1.2rem;
+    }
+
+    button {
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      padding: 0.7rem 1.4rem;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-weight: 600;
+      margin-top: 0.7rem;
+    }
+
+    .eqCard {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      border-left: 10px solid #7c3aed;
+      cursor: pointer;
+      transition: transform .1s ease;
+    }
+
+    .eqCard:hover {
+      background: #fafaff;
+      transform: scale(1.01);
+    }
+
+    .eqHeader {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .eqTime {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .badgeSymbol {
+      background: #7c3aed;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .badgeSymbol:hover {
+      background: #6a28e8;
+      transform: translateY(-2px);
+    }
+
+    .place {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0.2rem 0 0.5rem;
+    }
+
+    /* Popup */
+    .leaflet-popup-content-wrapper {
+      background: #ffffff;
+      border-radius: 12px;
+    }
+
+    .leaflet-popup-tip {
+      background: #ffffff;
+    }
+
+    .leaflet-popup-close-button {
+      color: #7c3aed !important;
+    }
+
+    /* ★ 通知エリア ★ */
+    #notifyArea {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 260px;
+      z-index: 9999;
+    }
+
+    .notifyCard {
+      background: white;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      border-left: 6px solid #ff66cc;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+      font-size: 0.9rem;
+      cursor: pointer;
+      opacity: 1;
+      transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+    }
+
+    .notifyCard.hide {
+      opacity: 0;
+      transform: translateX(40px);
+    }
+  </style>
 </head>
 
 <body>
 
-<header>
-  <h1>Symbol Earthquake Viewer</h1>
-  <div class="sub">Symbolブロックチェーンに記録された<br>気象庁の地震情報をお伝えしています(自動更新)</div>
-</header>
+  <header>
+    <h1>Symbol Earthquake Viewer</h1>
+    <div class="sub">Symbolブロックチェーンに記録された<br>気象庁の地震情報をお伝えしています(自動更新)</div>
+  </header>
 
-<!-- ★ 通知エリア ★ -->
-<div id="notifyArea"></div>
+  <!-- ★ 通知エリア ★ -->
+  <div id="notifyArea"></div>
 
-<div class="main">
+  <div class="main">
 
-  <div class="leftPanel">
-    <div class="nodeStatus" id="nodeInfo">ノード選択中…</div>
+    <div class="leftPanel">
+      <div class="nodeStatus" id="nodeInfo">ノード選択中…</div>
 
-    <div class="inputCard">
-      <div id="status" style="margin-top:6px;font-size:0.85rem;color:#555;"></div>
+      <div class="inputCard">
+        <div id="status" style="margin-top:6px;font-size:0.85rem;color:#555;"></div>
+      </div>
+
+      <div id="list"></div>
     </div>
 
-    <div id="list"></div>
+    <div class="rightPanel">
+      <div id="map"></div>
+    </div>
+
   </div>
 
-  <div class="rightPanel">
-    <div id="map"></div>
-  </div>
+  <script>
+    // ==================================================
+    // ★ 署名者フィルタ
+    // ==================================================
+    const ALLOWED_PUBKEY =
+      "B1A216D31CF6A1F10F393064DD1A447F02AE327FC27359DDC32B07B56021326E";
 
-</div>
+    // ==================================================
+    // 通知管理
+    // ==================================================
+    let notifyMap = {};
 
-<script>
-// ==================================================
-// ★ 署名者フィルタ
-// ==================================================
-const ALLOWED_PUBKEY =
-  "B1A216D31CF6A1F10F393064DD1A447F02AE327FC27359DDC32B07B56021326E";
+    function showNotify(hash, j, color) {
+      const area = document.getElementById("notifyArea");
+      const card = document.createElement("div");
+      card.className = "notifyCard";
+      card.style.borderLeftColor = color;
 
-// ==================================================
-// 通知管理
-// ==================================================
-let notifyMap = {};
-
-function showNotify(hash, j, color) {
-  const area = document.getElementById("notifyArea");
-  const card = document.createElement("div");
-  card.className = "notifyCard";
-  card.style.borderLeftColor = color;
-
-  const eq = j.earthquake;
-  card.innerHTML =
-    `<b>新しい地震を検知しました</b><br>
+      const eq = j.earthquake;
+      card.innerHTML =
+        `<b>新しい地震を検知しました</b><br>
      ${eq.hypocenter.name}<br>
      ${eq.time.slice(0, -3)}`;
 
-  card.onclick = () => {
-    const hypo = eq.hypocenter;
-    map.setView([hypo.latitude, hypo.longitude], 7, { animate:true });
-  };
+      card.onclick = () => {
+        const hypo = eq.hypocenter;
+        map.setView([hypo.latitude, hypo.longitude], 7, { animate: true });
+      };
 
-  area.prepend(card);
-  notifyMap[hash] = card;
-}
-
-function removeNotify(hash) {
-  const card = notifyMap[hash];
-  if (!card) return;
-  card.classList.add("hide");
-  setTimeout(() => card.remove(), 400);
-  delete notifyMap[hash];
-}
-
-// ==================================================
-// 震度変換
-// ==================================================
-function convertShindo(code) {
-  const table = {
-    10:1, 20:2, 30:3, 40:4,
-    45:5.0, 50:5.5, 55:6.0,
-    60:6.5, 70:7
-  };
-  return table[code] ?? 0;
-}
-
-function translateDomesticTsunami(str) {
-  if (!str) return "津波の心配なし";
-
-  const map = {
-    None: "津波の心配なし",
-    Unknown: "津波の心配なし",
-    Checking: "調査中",
-    NonEffective: "若干の海面変動の可能性",
-    Watch: "津波注意報",
-    Warning: "津波警報",
-    MajorWarning: "大津波警報",
-  };
-
-  return map[str] ?? str;
-}
-
-// ==================================================
-// Leaflet MAP
-// ==================================================
-let map = L.map('map').setView([36.5, 137.5], 5);
-L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png", {
-  attribution: "地理院タイル", maxZoom: 18, minZoom: 3
-}).addTo(map);
-
-let markers = [];
-let pendingMap = {};
-let confirmedMap = {};
-
-// ==================================================
-// NodeWatch → fallback
-// ==================================================
-const NODEWATCH_URL =
-  "https://nodewatch.symbol.tools/api/symbol/nodes/peer?only_ssl=true&limit=300&order=random";
-
-const FALLBACK_NODE = "https://symbol-mikun.net:3001";
-let SELECTED_NODE = null;
-
-async function selectBestNode() {
-  const info = document.getElementById("nodeInfo");
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 1500);
-
-  try {
-    const res = await fetch(NODEWATCH_URL, { signal: controller.signal });
-    clearTimeout(timeoutId);
-
-    const nodes = await res.json();
-    nodes.sort((a,b)=>b.height - a.height);
-
-    let ep = new URL(nodes[0].endpoint);
-    ep.protocol = "https:";
-    SELECTED_NODE = ep.origin;
-
-    info.innerHTML =
-      `使用ノード：<b>${SELECTED_NODE}</b><br>ブロック高：${nodes[0].height}`;
-    return;
-  } catch {
-    console.warn("Nodewatch失敗 → fallback");
-  }
-
-  SELECTED_NODE = FALLBACK_NODE;
-  info.innerHTML =
-    `使用ノード：<b>${SELECTED_NODE}</b><br><span style="color:#e11">Fallback使用</span>`;
-}
-
-function hexToUtf8(hex) {
-  if (!hex) return "";
-  if (hex.length %2) hex = "0"+hex;
-  return new TextDecoder().decode(
-    new Uint8Array(hex.match(/.{1,2}/g).map(b=>parseInt(b,16)))
-  );
-}
-
-function extractMsg(tx) {
-  if (!tx.message) return "";
-  return tx.message.payload ?? tx.message;
-}
-
-function parseEarthquakeJSON(msg) {
-  if (!msg) return null;
-  let raw = msg.trim();
-  if (raw.startsWith('"') && raw.endsWith('"')) raw = raw.slice(1,-1);
-  raw = raw.replace(/\\"/g,'"').replace(/[\u0000-\u001F]+/g,"");
-  try { return JSON.parse(raw); } catch { return null; }
-}
-
-function getTsunamiColor(type) {
-  const map = {
-    NonEffective: "#60a5fa",  // 軽微
-    Watch: "#facc15",         // 注意報
-    Warning: "#f97316",       // 警報
-    MajorWarning: "#dc2626"   // 大津波警報
-  };
-  return map[type] ?? null;
-}
-
-function getColorByShindo(s, pending, tsunamiType) {
-  const tsunamiColor = getTsunamiColor(tsunamiType);
-  if (tsunamiColor) return tsunamiColor;   // 津波優先
-
-  if (pending) return "#ff66cc";
-  if (s<1.5) return "#60a5fa";
-  if (s<2.5) return "#3b82f6";
-  if (s<3.5) return "#22c55e";
-  if (s<4.5) return "#eab308";
-  if (s<5.0) return "#f97316";
-  if (s<5.8) return "#ea580c";
-  if (s<6.3) return "#ef4444";
-  if (s<6.8) return "#b91c1c";
-  return "#7f1d1d";
-}
-
-// ==================================================
-// Confirmedロード
-// ==================================================
-async function loadEarthquake() {
-  if (!SELECTED_NODE) return;
-
-  const list = document.getElementById("list");
-  const status = document.getElementById("status");
-  const address = "NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ";
-
-  list.innerHTML = "";
-  status.textContent = "取得中…";
-
-  markers.forEach(m=>map.removeLayer(m));
-  markers=[];
-  pendingMap={};
-  confirmedMap={};
-  notifyMap={};
-  document.getElementById("notifyArea").innerHTML="";
-
-  const url =
-    `${SELECTED_NODE}/transactions/confirmed?address=${address}&pageSize=50&order=desc`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-  const txs = (data.data || []);
-
-  let first = true;
-  let firstLat = 36.5, firstLon = 137.5;
-
-  txs.forEach(item=>{
-    const tx = item.transaction;
-
-    // フィルタ：署名者が違う → 完全に無視（初期位置にも使わない）
-    if (tx.signerPublicKey !== ALLOWED_PUBKEY) return;
-
-    const msg = hexToUtf8(extractMsg(tx));
-    const j = parseEarthquakeJSON(msg);
-    if (!j || !j.earthquake) return;
-
-    // UIに追加（※無効データの場合は null）
-    const added = addEarthquakeToUI(j, false, item.meta.hash, false);
-
-    // 追加できたデータだけを confirmedMap に入れる
-    if (added) confirmedMap[item.meta.hash] = j;
-
-    // 追加できた地震だけ初期位置として採用する
-    if (added && first){
-      firstLat = j.earthquake.hypocenter.latitude;
-      firstLon = j.earthquake.hypocenter.longitude;
-      first = false;
+      area.prepend(card);
+      notifyMap[hash] = card;
     }
-  });
 
-  status.textContent = `取得完了：最新${txs.length}件`;
-  // ★ 最新の地震の marker を取得
-  const latest = markers[0]; // 先頭が最新（prepend）
+    function removeNotify(hash) {
+      const card = notifyMap[hash];
+      if (!card) return;
+      card.classList.add("hide");
+      setTimeout(() => card.remove(), 400);
+      delete notifyMap[hash];
+    }
 
-  if (latest) {
-  // 地図移動後に少し待ってポップアップを開く
-    map.setView([firstLat, firstLon], 6, { animate: true });
+    // ==================================================
+    // 震度変換
+    // ==================================================
+    function convertShindo(code) {
+      const table = {
+        10: 1, 20: 2, 30: 3, 40: 4,
+        45: 5.0, 50: 5.5, 55: 6.0,
+        60: 6.5, 70: 7
+      };
+      return table[code] ?? 0;
+    }
 
-    setTimeout(() => {
-      latest.openPopup();
-    }, 500);
-  }
-}
+    function translateDomesticTsunami(str) {
+      if (!str) return "津波の心配なし";
 
-// ==================================================
-// UI追加
-// ==================================================
-function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false){
-  const eq = j.earthquake;
-  const hypo = eq.hypocenter;
+      const map = {
+        None: "津波の心配なし",
+        Unknown: "津波の心配なし",
+        Checking: "調査中",
+        NonEffective: "若干の海面変動の可能性",
+        Watch: "津波注意報",
+        Warning: "津波警報",
+        MajorWarning: "大津波警報",
+      };
 
-  const depth = Number(hypo.depth);
-  const mag = Number(hypo.magnitude);
-  const shindo = convertShindo(eq.maxScale);
-  if (depth<0 || mag<=0 || shindo<=0) return null;
+      return map[str] ?? str;
+    }
 
-  const tsunamiType = eq.domesticTsunami;
-  const domestic = translateDomesticTsunami(eq.domesticTsunami);
-  const list = document.getElementById("list");
-  const color = getColorByShindo(shindo, isPending, tsunamiType);
+    // ==================================================
+    // Leaflet MAP
+    // ==================================================
+    let map = L.map('map').setView([36.5, 137.5], 5);
+    L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png", {
+      attribution: "地理院タイル", maxZoom: 18, minZoom: 3
+    }).addTo(map);
 
-  // ============================
-  // ★ マーカー生成
-  // ============================
-  const marker = L.circleMarker(
-    [hypo.latitude, hypo.longitude],
-    { radius: isPending?12:9, fillColor:color, color:"#fff", fillOpacity:0.95 }
-  ).addTo(map);
+    let markers = [];
+    let pendingMap = {};
+    let confirmedMap = {};
 
-  const popupHtml = `
+    // ==================================================
+    // NodeWatch → fallback
+    // ==================================================
+    const NODEWATCH_URL =
+      "https://nodewatch.symbol.tools/api/symbol/nodes/peer?only_ssl=true&limit=300&order=random";
+
+    const FALLBACK_NODE = "https://symbol-mikun.net:3001";
+    let SELECTED_NODE = null;
+
+    async function selectBestNode() {
+      const info = document.getElementById("nodeInfo");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+
+      try {
+        const res = await fetch(NODEWATCH_URL, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        const nodes = await res.json();
+        nodes.sort((a, b) => b.height - a.height);
+
+        let ep = new URL(nodes[0].endpoint);
+        ep.protocol = "https:";
+        SELECTED_NODE = ep.origin;
+
+        info.innerHTML =
+          `使用ノード：<b>${SELECTED_NODE}</b><br>ブロック高：${nodes[0].height}`;
+        return;
+      } catch {
+        console.warn("Nodewatch失敗 → fallback");
+      }
+
+      SELECTED_NODE = FALLBACK_NODE;
+      info.innerHTML =
+        `使用ノード：<b>${SELECTED_NODE}</b><br><span style="color:#e11">Fallback使用</span>`;
+    }
+
+    function hexToUtf8(hex) {
+      if (!hex) return "";
+      if (hex.length % 2) hex = "0" + hex;
+      return new TextDecoder().decode(
+        new Uint8Array(hex.match(/.{1,2}/g).map(b => parseInt(b, 16)))
+      );
+    }
+
+    function extractMsg(tx) {
+      if (!tx.message) return "";
+      return tx.message.payload ?? tx.message;
+    }
+
+    function parseEarthquakeJSON(msg) {
+      if (!msg) return null;
+      let raw = msg.trim();
+      if (raw.startsWith('"') && raw.endsWith('"')) raw = raw.slice(1, -1);
+      raw = raw.replace(/\\"/g, '"').replace(/[\u0000-\u001F]+/g, "");
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+
+    function getTsunamiColor(type) {
+      const map = {
+        NonEffective: "#60a5fa",  // 軽微
+        Watch: "#facc15",         // 注意報
+        Warning: "#f97316",       // 警報
+        MajorWarning: "#dc2626"   // 大津波警報
+      };
+      return map[type] ?? null;
+    }
+
+    function getColorByShindo(s, pending, tsunamiType) {
+      const tsunamiColor = getTsunamiColor(tsunamiType);
+      if (tsunamiColor) return tsunamiColor;   // 津波優先
+
+      if (pending) return "#ff66cc";
+      if (s < 1.5) return "#60a5fa";
+      if (s < 2.5) return "#3b82f6";
+      if (s < 3.5) return "#22c55e";
+      if (s < 4.5) return "#eab308";
+      if (s < 5.0) return "#f97316";
+      if (s < 5.8) return "#ea580c";
+      if (s < 6.3) return "#ef4444";
+      if (s < 6.8) return "#b91c1c";
+      return "#7f1d1d";
+    }
+
+    // ==================================================
+    // Confirmedロード
+    // ==================================================
+    async function loadEarthquake() {
+      if (!SELECTED_NODE) return;
+
+      const list = document.getElementById("list");
+      const status = document.getElementById("status");
+      const address = "NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ";
+
+      list.innerHTML = "";
+      status.textContent = "取得中…";
+
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      pendingMap = {};
+      confirmedMap = {};
+      notifyMap = {};
+      document.getElementById("notifyArea").innerHTML = "";
+
+      const url =
+        `${SELECTED_NODE}/transactions/confirmed?address=${address}&pageSize=50&order=desc`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+      const txs = (data.data || []);
+
+      let first = true;
+      let firstLat = 36.5, firstLon = 137.5;
+
+      txs.forEach(item => {
+        const tx = item.transaction;
+
+        // フィルタ：署名者が違う → 完全に無視（初期位置にも使わない）
+        if (tx.signerPublicKey !== ALLOWED_PUBKEY) return;
+
+        const msg = hexToUtf8(extractMsg(tx));
+        const j = parseEarthquakeJSON(msg);
+        if (!j || !j.earthquake) return;
+
+        // UIに追加（※無効データの場合は null）
+        const added = addEarthquakeToUI(j, false, item.meta.hash, false);
+
+        // 追加できたデータだけを confirmedMap に入れる
+        if (added) confirmedMap[item.meta.hash] = j;
+
+        // 追加できた地震だけ初期位置として採用する
+        if (added && first) {
+          firstLat = j.earthquake.hypocenter.latitude;
+          firstLon = j.earthquake.hypocenter.longitude;
+          first = false;
+        }
+      });
+
+      status.textContent = `取得完了：最新${txs.length}件`;
+      // ★ 最新の地震の marker を取得
+      const latest = markers[0]; // 先頭が最新（prepend）
+
+      if (latest) {
+        // 地図移動後に少し待ってポップアップを開く
+        map.setView([firstLat, firstLon], 6, { animate: true });
+
+        setTimeout(() => {
+          latest.openPopup();
+        }, 500);
+      }
+    }
+
+    // ==================================================
+    // UI追加
+    // ==================================================
+    function addEarthquakeToUI(j, isPending = false, hash = null, insertTop = false) {
+      const eq = j.earthquake;
+      const hypo = eq.hypocenter;
+
+      const depth = Number(hypo.depth);
+      const mag = Number(hypo.magnitude);
+      const shindo = convertShindo(eq.maxScale);
+      if (depth < 0 || mag <= 0 || shindo <= 0) return null;
+
+      const tsunamiType = eq.domesticTsunami;
+      const domestic = translateDomesticTsunami(eq.domesticTsunami);
+      const list = document.getElementById("list");
+      const color = getColorByShindo(shindo, isPending, tsunamiType);
+
+      // ============================
+      // ★ マーカー生成
+      // ============================
+      const marker = L.circleMarker(
+        [hypo.latitude, hypo.longitude],
+        { radius: isPending ? 12 : 9, fillColor: color, color: "#fff", fillOpacity: 0.95 }
+      ).addTo(map);
+
+      const popupHtml = `
     <b>${hypo.name}</b><br>
-    ${eq.time.slice(0,-3)}${isPending?"<span style='color:#ff0080;'>(NEW)</span>":""}<br>
+    ${eq.time.slice(0, -3)}${isPending ? "<span style='color:#ff0080;'>(NEW)</span>" : ""}<br>
     <b>M${hypo.magnitude}</b>・震度 ${shindo}<br>
     深さ ${hypo.depth}km<br>
     津波：${domestic}
   `;
 
-  const popup = L.popup().setContent(popupHtml);
-  marker.bindPopup(popup);
+      const popup = L.popup().setContent(popupHtml);
+      marker.bindPopup(popup);
 
-  // ===================================================
-  // ★ 修正版：ポップアップ枠の色を正しく設定する
-  // ===================================================
-  marker.on("popupopen", (ev)=>{
-    const container = ev.popup._container;
-    if (!container) return;
+      // ===================================================
+      // ★ 修正版：ポップアップ枠の色を正しく設定する
+      // ===================================================
+      marker.on("popupopen", (ev) => {
+        const container = ev.popup._container;
+        if (!container) return;
 
-    const wrapper = container.querySelector(".leaflet-popup-content-wrapper");
-    const tip = container.querySelector(".leaflet-popup-tip");
+        const wrapper = container.querySelector(".leaflet-popup-content-wrapper");
+        const tip = container.querySelector(".leaflet-popup-tip");
 
-    if (wrapper) wrapper.style.border = `3px solid ${color}`;
-    if (tip) tip.style.border = `3px solid ${color}`;
-  });
+        if (wrapper) wrapper.style.border = `3px solid ${color}`;
+        if (tip) tip.style.border = `3px solid ${color}`;
+      });
 
-  if (isPending){
-    map.setView([hypo.latitude, hypo.longitude], 7,{animate:true});
-    setTimeout(()=>marker.openPopup(),300);
-  }
+      if (isPending) {
+        map.setView([hypo.latitude, hypo.longitude], 7, { animate: true });
+        setTimeout(() => marker.openPopup(), 300);
+      }
 
-  markers.push(marker);
+      markers.push(marker);
 
-  // ============================
-  // カードUI
-  // ============================
-  const card = document.createElement("div");
-  card.className="eqCard";
-  card.style.borderLeftColor=color;
+      // ============================
+      // カードUI
+      // ============================
+      const card = document.createElement("div");
+      card.className = "eqCard";
+      card.style.borderLeftColor = color;
 
-  const explorer = hash
-    ? `<a class="badgeSymbol" href="https://symbol.fyi/transactions/${hash}" target="_blank">Symbol Explorer</a>`
-    : `<span class="badgeSymbol" style="background:#ff66cc;">新着</span>`;
+      const explorer = hash
+        ? `<a class="badgeSymbol" href="https://symbol.fyi/transactions/${hash}" target="_blank">Symbol Explorer</a>`
+        : `<span class="badgeSymbol" style="background:#ff66cc;">新着</span>`;
 
-  card.innerHTML=`
+      card.innerHTML = `
     <div class="eqHeader">
-      <div class="eqTime">${eq.time.slice(0,-3)}${isPending?"（新着）":""}</div>
+      <div class="eqTime">${eq.time.slice(0, -3)}${isPending ? "（新着）" : ""}</div>
       ${explorer}
     </div>
     <div class="place">${hypo.name}</div>
@@ -478,147 +551,148 @@ function addEarthquakeToUI(j, isPending=false, hash=null, insertTop=false){
     </div>
   `;
 
-  card.onclick = ()=>{
-    map.setView([hypo.latitude, hypo.longitude], 7,{animate:true});
-    setTimeout(()=>marker.openPopup(),250);
-  };
+      card.onclick = () => {
+        map.setView([hypo.latitude, hypo.longitude], 7, { animate: true });
+        setTimeout(() => marker.openPopup(), 250);
+      };
 
-  insertTop ? list.prepend(card) : list.appendChild(card);
+      insertTop ? list.prepend(card) : list.appendChild(card);
 
-  if (isPending) pendingMap[hash]={ marker, card };
-  return { marker, card };
-}
+      if (isPending) pendingMap[hash] = { marker, card };
+      return { marker, card };
+    }
 
-// ==================================================
-// pending → confirmed
-// ==================================================
-function promotePendingToConfirmed(hash, j){
-  const item = pendingMap[hash];
-  if (!item) return;
-  const { marker, card } = item;
+    // ==================================================
+    // pending → confirmed
+    // ==================================================
+    function promotePendingToConfirmed(hash, j) {
+      const item = pendingMap[hash];
+      if (!item) return;
+      const { marker, card } = item;
 
-  const eq = j.earthquake;
-  const hypo = eq.hypocenter;
-  const shindo = convertShindo(eq.maxScale);
-  const tsunamiType = eq.domesticTsunami;
-  const domestic = translateDomesticTsunami(eq.domesticTsunami);
-  const color = getColorByShindo(shindo, false, tsunamiType);
+      const eq = j.earthquake;
+      const hypo = eq.hypocenter;
+      const shindo = convertShindo(eq.maxScale);
+      const tsunamiType = eq.domesticTsunami;
+      const domestic = translateDomesticTsunami(eq.domesticTsunami);
+      const color = getColorByShindo(shindo, false, tsunamiType);
 
-  marker.setStyle({ fillColor:color, radius:9 });
+      marker.setStyle({ fillColor: color, radius: 9 });
 
-  card.style.borderLeftColor=color;
-  card.querySelector(".eqTime").textContent = eq.time.slice(0,-3);
+      card.style.borderLeftColor = color;
+      card.querySelector(".eqTime").textContent = eq.time.slice(0, -3);
 
-  card.querySelector(".badgeSymbol").outerHTML =
-    `<a class="badgeSymbol" href="https://symbol.fyi/transactions/${hash}" target="_blank">Symbol Explorer</a>`;
+      card.querySelector(".badgeSymbol").outerHTML =
+        `<a class="badgeSymbol" href="https://symbol.fyi/transactions/${hash}" target="_blank">Symbol Explorer</a>`;
 
-  card.querySelector("div[style]").innerHTML =
-    `深さ ${hypo.depth}km・M${hypo.magnitude}・震度 ${shindo}<br>
+      card.querySelector("div[style]").innerHTML =
+        `深さ ${hypo.depth}km・M${hypo.magnitude}・震度 ${shindo}<br>
      津波：${domestic}`;
 
-  delete pendingMap[hash];
-  removeNotify(hash);
-}
-
-// ==================================================
-// WebSocket
-// ==================================================
-const ListenerChannelName = {
-  unconfirmedAdded:"unconfirmedAdded",
-  confirmedAdded:"confirmedAdded",
-  block:"block"
-};
-
-let ws=null;
-let uid="";
-let funcs={};
-
-function addCallback(ch, fn){
-  if (!funcs[ch]) funcs[ch]=[];
-  funcs[ch].push(fn);
-}
-
-function startWebSocket(){
-  const wsUrl = SELECTED_NODE.replace("https","wss")+"/ws";
-  ws = new WebSocket(wsUrl);
-
-  ws.onmessage = (e)=>{
-    const data = JSON.parse(e.data);
-
-    if (data.uid !== undefined) {
-      uid=data.uid;
-      subscribeChannels();
-      return;
+      delete pendingMap[hash];
+      removeNotify(hash);
     }
-    if (funcs[data.topic]) funcs[data.topic].forEach(f=>f(data.data));
-  };
 
-  ws.onclose = ()=>{
-    uid="";
-    funcs={};
-    setTimeout(startWebSocket,1500);
-  };
-}
+    // ==================================================
+    // WebSocket
+    // ==================================================
+    const ListenerChannelName = {
+      unconfirmedAdded: "unconfirmedAdded",
+      confirmedAdded: "confirmedAdded",
+      block: "block"
+    };
 
-function subscribeChannels(){
-  const address = "NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ";
+    let ws = null;
+    let uid = "";
+    let funcs = {};
 
-  // 未承認
-  const ch1 = ListenerChannelName.unconfirmedAdded+"/"+address;
-  addCallback(ch1,(txObj)=>{
-    const tx = txObj.transaction;
-    if (tx.signerPublicKey!==ALLOWED_PUBKEY) return;
+    function addCallback(ch, fn) {
+      if (!funcs[ch]) funcs[ch] = [];
+      funcs[ch].push(fn);
+    }
 
-    const msg = hexToUtf8(extractMsg(tx));
-    const j = parseEarthquakeJSON(msg);
-    if (!j||!j.earthquake) return;
+    function startWebSocket() {
+      const wsUrl = SELECTED_NODE.replace("https", "wss") + "/ws";
+      ws = new WebSocket(wsUrl);
 
-    const hash = txObj.meta.hash;
-    const tsunamiType = j.earthquake.domesticTsunami;
-    const shindo = convertShindo(j.earthquake.maxScale);
-    const color = getColorByShindo(shindo, true, tsunamiType);
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
 
-    showNotify(hash, j, color);
-    const ui = addEarthquakeToUI(j,true,hash,true);
-    pendingMap[hash] = ui;
-  });
-  ws.send(JSON.stringify({uid,subscribe:ch1}));
+        if (data.uid !== undefined) {
+          uid = data.uid;
+          subscribeChannels();
+          return;
+        }
+        if (funcs[data.topic]) funcs[data.topic].forEach(f => f(data.data));
+      };
 
-  // 承認済み
-  const ch2 = ListenerChannelName.confirmedAdded+"/"+address;
-  addCallback(ch2,(txObj)=>{
-    const tx = txObj.transaction;
-    if (tx.signerPublicKey!==ALLOWED_PUBKEY) return;
+      ws.onclose = () => {
+        uid = "";
+        funcs = {};
+        setTimeout(startWebSocket, 1500);
+      };
+    }
 
-    const msg = hexToUtf8(extractMsg(tx));
-    const j = parseEarthquakeJSON(msg);
-    if (!j||!j.earthquake) return;
+    function subscribeChannels() {
+      const address = "NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ";
 
-    confirmedMap[txObj.meta.hash]=j;
-    promotePendingToConfirmed(txObj.meta.hash,j);
-  });
-  ws.send(JSON.stringify({uid,subscribe:ch2}));
+      // 未承認
+      const ch1 = ListenerChannelName.unconfirmedAdded + "/" + address;
+      addCallback(ch1, (txObj) => {
+        const tx = txObj.transaction;
+        if (tx.signerPublicKey !== ALLOWED_PUBKEY) return;
 
-  // ===============================
-  // ★ ブロック監視ログ ★
-  // ===============================
-  addCallback(ListenerChannelName.block, (block) => {
-    console.log("[WebSocket ALIVE] New block detected:", block.block.height);
-  });
+        const msg = hexToUtf8(extractMsg(tx));
+        const j = parseEarthquakeJSON(msg);
+        if (!j || !j.earthquake) return;
 
-  // ブロック
-  ws.send(JSON.stringify({uid,subscribe:ListenerChannelName.block}));
-}
+        const hash = txObj.meta.hash;
+        const tsunamiType = j.earthquake.domesticTsunami;
+        const shindo = convertShindo(j.earthquake.maxScale);
+        const color = getColorByShindo(shindo, true, tsunamiType);
 
-// ==================================================
-// 初期ロード
-// ==================================================
-window.onload = async ()=>{
-  await selectBestNode();
-  await loadEarthquake();
-  startWebSocket();
-};
-</script>
+        showNotify(hash, j, color);
+        const ui = addEarthquakeToUI(j, true, hash, true);
+        pendingMap[hash] = ui;
+      });
+      ws.send(JSON.stringify({ uid, subscribe: ch1 }));
+
+      // 承認済み
+      const ch2 = ListenerChannelName.confirmedAdded + "/" + address;
+      addCallback(ch2, (txObj) => {
+        const tx = txObj.transaction;
+        if (tx.signerPublicKey !== ALLOWED_PUBKEY) return;
+
+        const msg = hexToUtf8(extractMsg(tx));
+        const j = parseEarthquakeJSON(msg);
+        if (!j || !j.earthquake) return;
+
+        confirmedMap[txObj.meta.hash] = j;
+        promotePendingToConfirmed(txObj.meta.hash, j);
+      });
+      ws.send(JSON.stringify({ uid, subscribe: ch2 }));
+
+      // ===============================
+      // ★ ブロック監視ログ ★
+      // ===============================
+      addCallback(ListenerChannelName.block, (block) => {
+        console.log("[WebSocket ALIVE] New block detected:", block.block.height);
+      });
+
+      // ブロック
+      ws.send(JSON.stringify({ uid, subscribe: ListenerChannelName.block }));
+    }
+
+    // ==================================================
+    // 初期ロード
+    // ==================================================
+    window.onload = async () => {
+      await selectBestNode();
+      await loadEarthquake();
+      startWebSocket();
+    };
+  </script>
 
 </body>
+
 </html>
