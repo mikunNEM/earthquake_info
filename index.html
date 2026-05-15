@@ -313,12 +313,23 @@
       card.style.borderLeftColor = color;
 
       const eq = j.earthquake;
+      const hypo = eq.hypocenter;
+      const shindo = convertShindo(eq.maxScale);
+      const domestic = translateDomesticTsunami(eq.domesticTsunami);
+      const depthDisplay = Number(hypo.depth) <= 0 ? "ごく浅い" : `${hypo.depth}km`;
+      const isP2P = String(hash).startsWith("p2p_");
+      const label = isP2P ? "P2P速報" : "新着地震情報";
+
       card.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
           <div>
-            <b>新しい地震を検知しました</b><br>
-            ${eq.hypocenter.name}<br>
-            ${formatTime(eq.time)}
+            <b>${label}</b><br>
+            <span style="font-size:1rem;font-weight:600;">${hypo.name}</span><br>
+            ${formatTime(eq.time)}<br>
+            <span style="font-size:0.85rem;color:#444;">
+              M${hypo.magnitude}・震度 ${shindo}<br>
+              深さ ${depthDisplay}・${domestic}
+            </span>
           </div>
           <span class="notifyClose">×</span>
         </div>`;
