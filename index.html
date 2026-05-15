@@ -230,14 +230,38 @@
       font-size: 0.9rem;
       color: #444;
     }
+
+    #soundBtn {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 0.45rem 1rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 600;
+      white-space: nowrap;
+      margin-top: 0;
+      transition: background 0.2s;
+    }
+
+    #soundBtn.on {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: white;
+    }
   </style>
 </head>
 
 <body>
 
   <header>
-    <h1>Symbol Earthquake Viewer</h1>
-    <div class="sub">Symbolブロックチェーンに記録された<br>気象庁の地震情報をお伝えしています(自動更新)</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h1>Symbol Earthquake Viewer</h1>
+        <div class="sub">気象庁の地震情報をリアルタイムにお伝えします<br>P2P地震速報 ＋ Symbolブロックチェーン（自動更新）</div>
+      </div>
+      <button id="soundBtn" onclick="toggleSound()">🔕 通知OFF</button>
+    </div>
   </header>
 
   <!-- ★ 通知エリア ★ -->
@@ -726,6 +750,54 @@
     }
 
     // ==================================================
+    // 音声通知
+    // ==================================================
+    let audioCtx = null;
+    let soundEnabled = false;
+
+    function toggleSound() {
+      const btn = document.getElementById("soundBtn");
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      soundEnabled = !soundEnabled;
+      btn.textContent = soundEnabled ? "🔔 通知ON" : "🔕 通知OFF";
+      btn.classList.toggle("on", soundEnabled);
+    }
+
+    function playBeep(frequency, startTime, duration = 0.15) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = "sine";
+      osc.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.35, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
+
+    function playEarthquakeSound(shindo) {
+      if (!audioCtx || !soundEnabled) return;
+      let freq, count;
+      if (shindo < 1.5)      { freq = 880; count = 1; }
+      else if (shindo < 2.5) { freq = 800; count = 1; }
+      else if (shindo < 3.5) { freq = 660; count = 2; }
+      else if (shindo < 4.5) { freq = 550; count = 2; }
+      else if (shindo < 5.0) { freq = 440; count = 3; }
+      else if (shindo < 5.8) { freq = 380; count = 3; }
+      else if (shindo < 6.3) { freq = 300; count = 4; }
+      else if (shindo < 6.8) { freq = 250; count = 4; }
+      else                   { freq = 200; count = 5; }
+
+      const interval = 0.28;
+      for (let i = 0; i < count; i++) {
+        playBeep(freq, audioCtx.currentTime + i * interval);
+      }
+    }
+
+    // ==================================================
     // P2P地震速報
     // ==================================================
     const P2P_WS_URL = "wss://api.p2pquake.net/v2/ws";
@@ -819,6 +891,7 @@
 
         showNotify("p2p_" + timeKey.replace(/[^0-9]/g, ""), j, color);
         addMarkerOnly(j);
+        playEarthquakeSound(shindo);
         updateP2PStatus(`<b style="color:#22c55e">接続中</b>（最終受信：${formatTime(timeKey)}）`);
       };
 
