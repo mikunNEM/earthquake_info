@@ -511,23 +511,23 @@
       let first = true;
       let firstLat = 36.5, firstLon = 137.5;
 
+      // パースできたエントリを収集してから地震発生時刻で降順ソート
+      const entries = [];
       txs.forEach(item => {
         const tx = item.transaction;
-
-        // フィルタ：署名者が違う → 完全に無視（初期位置にも使わない）
         if (tx.signerPublicKey !== ALLOWED_PUBKEY) return;
-
         const msg = hexToUtf8(extractMsg(tx));
         const j = parseEarthquakeJSON(msg);
         if (!j || !j.earthquake) return;
+        entries.push({ j, hash: item.meta.hash });
+      });
+      entries.sort((a, b) =>
+        new Date(b.j.earthquake.time) - new Date(a.j.earthquake.time)
+      );
 
-        // UIに追加（※無効データの場合は null）
-        const added = addEarthquakeToUI(j, false, item.meta.hash, false);
-
-        // 追加できたデータだけを confirmedMap に入れる
-        if (added) confirmedMap[item.meta.hash] = j;
-
-        // 追加できた地震だけ初期位置として採用する
+      entries.forEach(({ j, hash }) => {
+        const added = addEarthquakeToUI(j, false, hash, false);
+        if (added) confirmedMap[hash] = j;
         if (added && first) {
           firstLat = j.earthquake.hypocenter.latitude;
           firstLon = j.earthquake.hypocenter.longitude;
