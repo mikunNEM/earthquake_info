@@ -279,6 +279,9 @@
       </div>
 
       <div id="list"></div>
+      <div id="loadMoreWrap" style="display:none;text-align:center;padding:0.5rem 0 1rem;">
+        <button id="loadMoreBtn" onclick="loadMoreEarthquakes()" style="background:#7c3aed;">もっと読み込む</button>
+      </div>
     </div>
 
     <div class="rightPanel">
@@ -484,12 +487,14 @@
     // ==================================================
     // Confirmedロード
     // ==================================================
+    const PAGE_SIZE = 50;
+    let currentPage = 1;
+
     async function loadEarthquake() {
       if (!SELECTED_NODE) return;
 
       const list = document.getElementById("list");
       const status = document.getElementById("status");
-      const address = "NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ";
 
       list.innerHTML = "";
       status.textContent = "取得中…";
@@ -500,18 +505,42 @@
       confirmedMap = {};
       notifyMap = {};
       document.getElementById("notifyArea").innerHTML = "";
+      document.getElementById("loadMoreWrap").style.display = "none";
 
-      const url =
-        `${SELECTED_NODE}/transactions/confirmed?address=${address}&pageSize=50&order=desc`;
-
-      const res = await fetch(url);
-      const data = await res.json();
-      const txs = (data.data || []);
+      currentPage = 1;
+      const { entries, totalFetched } = await fetchPage(1);
 
       let first = true;
       let firstLat = 36.5, firstLon = 137.5;
 
-      // パースできたエントリを収集してから地震発生時刻で降順ソート
+      entries.forEach(({ j, hash }) => {
+        const added = addEarthquakeToUI(j, false, hash, false);
+        if (added) confirmedMap[hash] = j;
+        if (added && first) {
+          firstLat = j.earthquake.hypocenter.latitude;
+          firstLon = j.earthquake.hypocenter.longitude;
+          first = false;
+        }
+      });
+
+      status.textContent = `取得完了：最新${totalFetched}件`;
+      document.getElementById("loadMoreWrap").style.display =
+        totalFetched >= PAGE_SIZE ? "block" : "none";
+
+      const latest = markers[0];
+      if (latest) {
+        map.setView([firstLat, firstLon], 6, { animate: true });
+        setTimeout(() => latest.openPopup(), 500);
+      }
+    }
+
+    async function fetchPage(page) {
+      const address = "NADMA4NNPH2E2XMFGJNTKFYJARRH5VTKXAPUJNQ";
+      const url = `${SELECTED_NODE}/transactions/confirmed?address=${address}&pageSize=${PAGE_SIZE}&pageNumber=${page}&order=desc`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const txs = data.data || [];
+
       const entries = [];
       txs.forEach(item => {
         const tx = item.transaction;
@@ -524,29 +553,27 @@
       entries.sort((a, b) =>
         new Date(b.j.earthquake.time) - new Date(a.j.earthquake.time)
       );
+      return { entries, totalFetched: txs.length };
+    }
+
+    async function loadMoreEarthquakes() {
+      const btn = document.getElementById("loadMoreBtn");
+      btn.disabled = true;
+      btn.textContent = "読み込み中…";
+
+      currentPage++;
+      const { entries, totalFetched } = await fetchPage(currentPage);
 
       entries.forEach(({ j, hash }) => {
+        if (confirmedMap[hash]) return;
         const added = addEarthquakeToUI(j, false, hash, false);
         if (added) confirmedMap[hash] = j;
-        if (added && first) {
-          firstLat = j.earthquake.hypocenter.latitude;
-          firstLon = j.earthquake.hypocenter.longitude;
-          first = false;
-        }
       });
 
-      status.textContent = `取得完了：最新${txs.length}件`;
-      // ★ 最新の地震の marker を取得
-      const latest = markers[0]; // 先頭が最新（prepend）
-
-      if (latest) {
-        // 地図移動後に少し待ってポップアップを開く
-        map.setView([firstLat, firstLon], 6, { animate: true });
-
-        setTimeout(() => {
-          latest.openPopup();
-        }, 500);
-      }
+      btn.disabled = false;
+      btn.textContent = "もっと読み込む";
+      document.getElementById("loadMoreWrap").style.display =
+        totalFetched >= PAGE_SIZE ? "block" : "none";
     }
 
     // ==================================================
