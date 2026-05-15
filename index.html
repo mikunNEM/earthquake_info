@@ -207,6 +207,29 @@
       opacity: 0;
       transform: translateX(40px);
     }
+
+    .notifyClose {
+      cursor: pointer;
+      font-size: 1.1rem;
+      color: #aaa;
+      line-height: 1;
+      flex-shrink: 0;
+      padding: 0 4px;
+    }
+
+    .notifyClose:hover {
+      color: #333;
+    }
+
+    .p2pStatusCard {
+      background: #fff;
+      border-left: 4px solid #0d9488;
+      padding: 0.7rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.2rem;
+      font-size: 0.9rem;
+      color: #444;
+    }
   </style>
 </head>
 
@@ -224,6 +247,7 @@
 
     <div class="leftPanel">
       <div class="nodeStatus" id="nodeInfo">ノード選択中…</div>
+      <div class="p2pStatusCard" id="p2pStatus">P2P速報：接続中…</div>
 
       <div class="inputCard">
         <div id="status" style="margin-top:6px;font-size:0.85rem;color:#555;"></div>
@@ -250,6 +274,14 @@
     // ==================================================
     let notifyMap = {};
 
+    function formatTime(t) {
+      if (!t) return "";
+      // ISO形式 "2024-01-15T10:30:00+09:00" → "2024-01-15 10:30"
+      if (t.includes("T")) return t.slice(0, 16).replace("T", " ");
+      // P2P形式 "2024/01/15 10:30:00" → "2024/01/15 10:30"
+      return t.slice(0, 16);
+    }
+
     function showNotify(hash, j, color) {
       const area = document.getElementById("notifyArea");
       const card = document.createElement("div");
@@ -257,10 +289,20 @@
       card.style.borderLeftColor = color;
 
       const eq = j.earthquake;
-      card.innerHTML =
-        `<b>新しい地震を検知しました</b><br>
-     ${eq.hypocenter.name}<br>
-     ${eq.time.slice(0, -3)}`;
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div>
+            <b>新しい地震を検知しました</b><br>
+            ${eq.hypocenter.name}<br>
+            ${formatTime(eq.time)}
+          </div>
+          <span class="notifyClose">×</span>
+        </div>`;
+
+      card.querySelector(".notifyClose").onclick = (e) => {
+        e.stopPropagation();
+        removeNotify(hash);
+      };
 
       card.onclick = () => {
         const hypo = eq.hypocenter;
@@ -684,12 +726,120 @@
     }
 
     // ==================================================
+    // P2P地震速報
+    // ==================================================
+    const P2P_WS_URL = "wss://api.p2pquake.net/v2/ws";
+
+    let p2pWs = null;
+    const p2pSeenSet = new Set();
+
+    function updateP2PStatus(msg) {
+      document.getElementById("p2pStatus").innerHTML = `P2P速報：${msg}`;
+    }
+
+    function normalizeP2P(item) {
+      const eq = item.earthquake;
+      const hypo = eq.hypocenter;
+      return {
+        earthquake: {
+          time: eq.time,
+          hypocenter: {
+            name: hypo.name || "不明",
+            latitude: hypo.latitude,
+            longitude: hypo.longitude,
+            depth: hypo.depth < 0 ? 0 : hypo.depth,
+            magnitude: hypo.magnitude
+          },
+          maxScale: eq.maxScale,
+          domesticTsunami: eq.domesticTsunami
+        }
+      };
+    }
+
+    function addMarkerOnly(j) {
+      const eq = j.earthquake;
+      const hypo = eq.hypocenter;
+      const shindo = convertShindo(eq.maxScale);
+      const color = getColorByShindo(shindo, false, eq.domesticTsunami);
+      const depthDisplay = Number(hypo.depth) <= 0 ? "ごく浅い" : `${hypo.depth}km`;
+      const domestic = translateDomesticTsunami(eq.domesticTsunami);
+
+      const marker = L.circleMarker(
+        [hypo.latitude, hypo.longitude],
+        { radius: 11, fillColor: color, color: "#fff", fillOpacity: 0.95 }
+      ).addTo(map);
+
+      const popupHtml = `
+        <b>${hypo.name}</b><br>
+        ${formatTime(eq.time)} <span style="color:#0d9488;font-size:0.8em;">(P2P速報)</span><br>
+        <b>M${hypo.magnitude}</b>・震度 ${shindo}<br>
+        深さ ${depthDisplay}<br>
+        津波：${domestic}`;
+
+      marker.bindPopup(L.popup().setContent(popupHtml));
+
+      marker.on("popupopen", (ev) => {
+        const container = ev.popup._container;
+        if (!container) return;
+        const wrapper = container.querySelector(".leaflet-popup-content-wrapper");
+        const tip = container.querySelector(".leaflet-popup-tip");
+        if (wrapper) wrapper.style.border = `3px solid ${color}`;
+        if (tip) tip.style.border = `3px solid ${color}`;
+      });
+
+      markers.push(marker);
+      map.setView([hypo.latitude, hypo.longitude], 7, { animate: true });
+      setTimeout(() => marker.openPopup(), 300);
+    }
+
+    function startP2PWS() {
+      p2pWs = new WebSocket(P2P_WS_URL);
+
+      p2pWs.onopen = () => {
+        updateP2PStatus('<b style="color:#22c55e">接続中</b>');
+      };
+
+      p2pWs.onmessage = (e) => {
+        let item;
+        try { item = JSON.parse(e.data); } catch { return; }
+
+        if (item.code !== 551) return;
+        const eq = item.earthquake;
+        if (!eq || !eq.hypocenter) return;
+        if (eq.hypocenter.latitude < -100) return;
+        if (eq.maxScale <= 0) return;
+
+        const timeKey = eq.time;
+        if (p2pSeenSet.has(timeKey)) return;
+        p2pSeenSet.add(timeKey);
+
+        const j = normalizeP2P(item);
+        const shindo = convertShindo(eq.maxScale);
+        const color = getColorByShindo(shindo, false, eq.domesticTsunami);
+
+        showNotify("p2p_" + timeKey.replace(/[^0-9]/g, ""), j, color);
+        addMarkerOnly(j);
+        updateP2PStatus(`<b style="color:#22c55e">接続中</b>（最終受信：${formatTime(timeKey)}）`);
+      };
+
+      p2pWs.onclose = () => {
+        updateP2PStatus('<span style="color:#e11">切断 → 再接続中</span>');
+        setTimeout(startP2PWS, 3000);
+      };
+
+      p2pWs.onerror = () => {
+        updateP2PStatus('<span style="color:#e11">接続エラー</span>');
+      };
+    }
+
+    // ==================================================
     // 初期ロード
     // ==================================================
     window.onload = async () => {
       await selectBestNode();
       await loadEarthquake();
       startWebSocket();
+      startP2PWS();
     };
   </script>
 
