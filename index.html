@@ -249,6 +249,29 @@
       background: rgba(255, 255, 255, 0.3);
       border-color: white;
     }
+
+    @media(max-width: 600px) {
+      header {
+        padding: 0.6rem 1rem;
+      }
+
+      header .powered-by {
+        display: none;
+      }
+
+      header h1 {
+        font-size: 1.05rem;
+      }
+
+      header .sub {
+        display: none;
+      }
+
+      #soundBtn {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.8rem;
+      }
+    }
   </style>
 </head>
 
@@ -257,7 +280,7 @@
   <header>
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div>
-        <div style="font-size:0.7rem;letter-spacing:0.12em;opacity:0.65;text-transform:uppercase;margin-bottom:0.3rem;">Powered by Symbol Blockchain</div>
+        <div class="powered-by" style="font-size:0.7rem;letter-spacing:0.12em;opacity:0.65;text-transform:uppercase;margin-bottom:0.3rem;">Powered by Symbol Blockchain</div>
         <h1>Symbol Earthquake Viewer</h1>
         <div class="sub">Symbolブロックチェーンに永続記録された、気象庁の地震情報を公開しています。</div>
       </div>
