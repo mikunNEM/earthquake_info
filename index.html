@@ -825,6 +825,10 @@
       soundEnabled = !soundEnabled;
       btn.textContent = soundEnabled ? "🔔 通知ON" : "🔕 通知OFF";
       btn.classList.toggle("on", soundEnabled);
+      if (soundEnabled) {
+        playBeep(880, audioCtx.currentTime, 0.1);
+        playBeep(1200, audioCtx.currentTime + 0.12, 0.1);
+      }
     }
 
     function playBeep(frequency, startTime, duration = 0.15) {
