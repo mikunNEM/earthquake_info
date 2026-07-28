@@ -334,6 +334,8 @@
     }
 
     function showNotify(hash, j, color) {
+      playNotifySound();
+
       const area = document.getElementById("notifyArea");
       const card = document.createElement("div");
       card.className = "notifyCard";
@@ -842,23 +844,10 @@
       osc.stop(startTime + duration);
     }
 
-    function playEarthquakeSound(shindo) {
+    function playNotifySound() {
       if (!audioCtx || !soundEnabled) return;
-      let freq, count;
-      if (shindo < 1.5)      { freq = 880; count = 1; }
-      else if (shindo < 2.5) { freq = 800; count = 1; }
-      else if (shindo < 3.5) { freq = 660; count = 2; }
-      else if (shindo < 4.5) { freq = 550; count = 2; }
-      else if (shindo < 5.0) { freq = 440; count = 3; }
-      else if (shindo < 5.8) { freq = 380; count = 3; }
-      else if (shindo < 6.3) { freq = 300; count = 4; }
-      else if (shindo < 6.8) { freq = 250; count = 4; }
-      else                   { freq = 200; count = 5; }
-
-      const interval = 0.28;
-      for (let i = 0; i < count; i++) {
-        playBeep(freq, audioCtx.currentTime + i * interval);
-      }
+      playBeep(880, audioCtx.currentTime, 0.1);
+      playBeep(1200, audioCtx.currentTime + 0.12, 0.1);
     }
 
     // ==================================================
@@ -955,7 +944,6 @@
 
         showNotify("p2p_" + timeKey.replace(/[^0-9]/g, ""), j, color);
         addMarkerOnly(j);
-        playEarthquakeSound(shindo);
         updateP2PStatus(`<b style="color:#22c55e">接続中</b>（最終受信：${formatTime(timeKey)}）`);
       };
 
