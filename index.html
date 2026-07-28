@@ -775,11 +775,9 @@
         if (!j || !j.earthquake) return;
 
         const hash = txObj.meta.hash;
-        const tsunamiType = j.earthquake.domesticTsunami;
-        const shindo = convertShindo(j.earthquake.maxScale);
-        const color = getColorByShindo(shindo, true, tsunamiType);
 
-        showNotify(hash, j, color);
+        // ★ ポップアップはP2P受信時に既に表示済みのため、ここでは出さない（重複防止）。
+        //   左の履歴リストのみ、ブロックチェーン承認タイミング（P2Pより数分遅れ）で追加する。
         const ui = addEarthquakeToUI(j, true, hash, true);
         pendingMap[hash] = ui;
       });
